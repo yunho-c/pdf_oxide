@@ -1519,7 +1519,50 @@ impl PdfDocument {
         let mut inherited = HashMap::new();
 
         // Load page tree and find the requested page
-        self.get_page_from_tree(pages_ref, page_index, &mut 0, &mut inherited)
+        match self.get_page_from_tree(pages_ref, page_index, &mut 0, &mut inherited) {
+            Ok(page) => Ok(page),
+            Err(e) => {
+                // If tree traversal fails (malformed page tree), try fallback scanning
+                if matches!(e, Error::InvalidPdf(_)) {
+                    log::warn!(
+                        "Page tree traversal failed ({}), trying fallback scan method (Issue #41)",
+                        e
+                    );
+                    self.get_page_by_scanning(page_index)
+                } else {
+                    Err(e)
+                }
+            },
+        }
+    }
+
+    /// Get a page by scanning all objects in the PDF (fallback for broken page trees)
+    /// This method is used when the standard page tree traversal fails due to malformed structure.
+    fn get_page_by_scanning(&mut self, target_index: usize) -> Result<Object> {
+        let mut current_index = 0;
+
+        // Collect all object numbers first to avoid borrow checker issues
+        let obj_nums: Vec<u32> = self.xref.all_object_numbers().collect();
+
+        // Iterate through all objects looking for Page objects
+        for obj_num in obj_nums {
+            if let Ok(obj) = self.load_object(ObjectRef { id: obj_num, gen: 0 }) {
+                if let Some(dict) = obj.as_dict() {
+                    if let Some(type_obj) = dict.get("Type") {
+                        if let Some(type_name) = type_obj.as_name() {
+                            if type_name == "Page" {
+                                if current_index == target_index {
+                                    return Ok(obj);
+                                }
+                                current_index += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Err(Error::InvalidPdf(format!("Page index {} not found by scanning", target_index)))
     }
 
     /// Recursively traverse page tree to find a specific page.
@@ -1599,12 +1642,21 @@ impl PdfDocument {
                     }
                 }
 
-                let kids = node_dict
-                    .get("Kids")
-                    .and_then(|obj| obj.as_array())
-                    .ok_or_else(|| {
-                        Error::InvalidPdf("Pages node missing /Kids array".to_string())
-                    })?;
+                // Try to get /Kids array; if missing, this is a malformed PDF
+                let kids = match node_dict.get("Kids").and_then(|obj| obj.as_array()) {
+                    Some(k) => k,
+                    None => {
+                        log::warn!(
+                            "Malformed PDF: Pages node missing /Kids array (Issue #41 - resilient parsing)"
+                        );
+                        // Malformed PDF: Pages node has no /Kids array
+                        // Gracefully return without error to allow other recovery paths
+                        // The scanning method will find pages eventually
+                        return Err(Error::InvalidPdf(
+                            "Pages node missing /Kids array - try fallback method".to_string(),
+                        ));
+                    },
+                };
 
                 for kid in kids {
                     let kid_ref = kid.as_reference().ok_or_else(|| {
