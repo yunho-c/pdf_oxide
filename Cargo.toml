@@ -24,7 +24,7 @@ env_logger = "0.11"
 chrono = "0.4"  # Timestamp generation for benchmark results
 
 # Parsing
-nom = "8.0"
+nom = "7.1"
 regex = "1.10"
 lazy_static = "1.4"
 
@@ -47,7 +47,7 @@ phf = { version = "0.11", features = ["macros"] }  # Perfect hash maps for Adobe
 # Image processing
 image = { version = "0.24", default-features = false, features = ["png", "jpeg", "tiff"] }
 base64 = "0.22"  # For embedding images as data URIs
-tiff = "0.9"  # TIFF support including CCITT decompression
+tiff = "0.11"  # TIFF support including CCITT decompression
 fax = "0.2"   # CCITT Group 3/4 decompression for scanned PDFs (more lenient with malformed EOFB)
 
 # Encryption support
@@ -68,7 +68,7 @@ signature = { version = "2.2", optional = true }      # Signature traits
 sha1 = { version = "0.10", optional = true }          # SHA-1 for legacy signatures
 
 # Math and algorithms
-ndarray = { version = "0.16", optional = true, features = ["std"] }
+ndarray = { version = "0.17", optional = true, features = ["std"] }
 linfa = { version = "0.7", optional = true }
 linfa-clustering = { version = "0.7", optional = true }
 
@@ -96,7 +96,7 @@ wasm-bindgen = { version = "0.2", optional = true }
 web-sys = { version = "0.3", optional = true, features = ["console"] }
 js-sys = { version = "0.3", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
-getrandom = { version = "0.2", features = ["js"], optional = true }
+getrandom = { version = "0.3", optional = true }
 
 # Table detection - page rendering (optional)
 pdfium-render = { version = "0.8", optional = true }
@@ -118,7 +118,7 @@ calamine = { version = "0.26", optional = true }
 zip = { version = "7.0", optional = true, default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 proptest = "1.4"
 regex = "1.10"
 tempfile = "3.10"
