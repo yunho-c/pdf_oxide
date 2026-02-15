@@ -116,7 +116,6 @@ fn test_markdown_multiline() {
 }
 
 #[test]
-#[ignore] // TODO: Reading order test needs tuning for layout analysis parameters
 fn test_markdown_reading_order_top_to_bottom() {
     let converter = MarkdownConverter::new();
     let options = ConversionOptions {
@@ -124,9 +123,10 @@ fn test_markdown_reading_order_top_to_bottom() {
         ..Default::default()
     };
 
+    // PDF coordinates: Y increases upward, so top of page has larger Y
     let mut chars = Vec::new();
-    chars.extend(mock_word("Bottom", 0.0, 100.0, 12.0, false));
-    chars.extend(mock_word("Top", 0.0, 0.0, 12.0, false));
+    chars.extend(mock_word("Bottom", 0.0, 0.0, 12.0, false));
+    chars.extend(mock_word("Top", 0.0, 100.0, 12.0, false));
     chars.extend(mock_word("Middle", 0.0, 50.0, 12.0, false));
 
     let result = converter.convert_page(&chars, &options).unwrap();
@@ -242,7 +242,6 @@ fn test_html_layout_basic() {
 }
 
 #[test]
-#[ignore] // TODO: HTML layout test needs tuning for layout analysis parameters
 fn test_html_layout_multiple_elements() {
     let converter = HtmlConverter::new();
     let options = ConversionOptions {
@@ -256,10 +255,12 @@ fn test_html_layout_multiple_elements() {
 
     let result = converter.convert_page(&chars, &options).unwrap();
 
-    assert!(result.contains("First"));
-    assert!(result.contains("Second"));
+    // Verify both words' characters appear at their respective Y positions
     assert!(result.contains("top: 20px"));
     assert!(result.contains("top: 50px"));
+    // Verify characters from both words are present
+    assert!(result.contains(">F<"));
+    assert!(result.contains(">S<"));
 }
 
 #[test]

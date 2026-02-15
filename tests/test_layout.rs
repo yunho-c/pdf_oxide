@@ -189,11 +189,11 @@ fn test_cluster_words_into_lines_simple() {
 // NOTE: test_reading_order_tree_based removed - relied on LayoutTree and determine_reading_order (both deleted)
 
 #[test]
-#[ignore] // TODO: Layout test needs tuning for analysis parameters
 fn test_reading_order_graph_based_simple() {
+    // PDF coordinates: Y increases upward, so top of page has larger Y
     let blocks = vec![
-        mock_block("TopLeft", 0.0, 0.0, 12.0, false),
-        mock_block("TopRight", 100.0, 0.0, 12.0, false),
+        mock_block("TopLeft", 0.0, 100.0, 12.0, false),
+        mock_block("TopRight", 100.0, 100.0, 12.0, false),
         mock_block("BottomLeft", 0.0, 50.0, 12.0, false),
         mock_block("BottomRight", 100.0, 50.0, 12.0, false),
     ];
@@ -209,13 +209,13 @@ fn test_reading_order_graph_based_simple() {
 }
 
 #[test]
-#[ignore] // TODO: Layout test needs tuning for analysis parameters
 fn test_reading_order_two_columns() {
+    // PDF coordinates: Y increases upward, so top of page has larger Y
     let blocks = vec![
-        mock_block("Col1Line1", 0.0, 0.0, 12.0, false),
-        mock_block("Col1Line2", 0.0, 20.0, 12.0, false),
-        mock_block("Col2Line1", 300.0, 0.0, 12.0, false),
-        mock_block("Col2Line2", 300.0, 20.0, 12.0, false),
+        mock_block("Col1Line1", 0.0, 100.0, 12.0, false),
+        mock_block("Col1Line2", 0.0, 50.0, 12.0, false),
+        mock_block("Col2Line1", 300.0, 100.0, 12.0, false),
+        mock_block("Col2Line2", 300.0, 50.0, 12.0, false),
     ];
 
     let order = graph_based_reading_order(&blocks);

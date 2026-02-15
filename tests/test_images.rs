@@ -310,7 +310,6 @@ fn test_extract_raw_rgb_image_from_xobject() {
 }
 
 #[test]
-#[ignore] // TODO: Image extraction test has assertion mismatch - needs investigation
 fn test_extract_raw_grayscale_image_from_xobject() {
     let mut dict = HashMap::new();
     dict.insert("Subtype".to_string(), Object::Name("Image".to_string()));

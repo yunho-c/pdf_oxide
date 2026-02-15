@@ -284,18 +284,15 @@ impl Object {
 /// immediately after the EOL marker following "stream". However, some PDF generators
 /// add extra whitespace characters.
 ///
-/// PDF whitespace characters (Section 7.2.2):
-/// - NUL (0x00)
-/// - TAB (0x09)
-/// - LF (0x0A)
-/// - FF (0x0C)
-/// - CR (0x0D)
-/// - SPACE (0x20)
+/// Per §7.3.8.2, the "stream" keyword is followed by a single EOL (CR, LF, or CRLF).
+/// Some malformed PDFs have extra EOL markers. We only strip CR/LF characters — not
+/// spaces, tabs, or NUL — because stream content (images, object streams) can
+/// legitimately start with those bytes.
 fn trim_leading_stream_whitespace(data: &[u8]) -> &[u8] {
     let mut start = 0;
     while start < data.len() {
         match data[start] {
-            0x00 | 0x09 | 0x0A | 0x0C | 0x0D | 0x20 => start += 1,
+            0x0A | 0x0D => start += 1,
             _ => break,
         }
     }

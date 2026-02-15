@@ -748,7 +748,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO: Fix parsing edge case with consecutive operator names
     fn test_parse_color_operators() {
         // Add proper spacing between operators
         let stream = b"1 0 0 rg\n0 1 0 RG";
