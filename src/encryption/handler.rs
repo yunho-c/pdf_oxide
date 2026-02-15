@@ -85,8 +85,21 @@ impl EncryptionHandler {
             return Ok(true);
         }
 
-        // TODO: Try authenticating as owner password (Algorithm 6/7)
-        // For now, we only support user passwords
+        // Try authenticating as owner password (Algorithm 7 for R≤4, Algorithm 12 for R≥5)
+        if let Some(key) = algorithms::authenticate_owner_password(
+            password,
+            &self.dict.user_password,
+            &self.dict.owner_password,
+            self.dict.permissions,
+            &self.file_id,
+            self.dict.revision,
+            self.dict.key_length_bytes(),
+            self.dict.encrypt_metadata,
+        ) {
+            self.encryption_key = Some(key);
+            log::info!("Successfully authenticated with owner password");
+            return Ok(true);
+        }
 
         log::warn!("Password authentication failed");
         Ok(false)
