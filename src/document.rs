@@ -1547,7 +1547,12 @@ impl PdfDocument {
             Ok(page) => Ok(page),
             Err(e) => {
                 // If tree traversal fails (malformed page tree), try fallback scanning
-                if matches!(e, Error::InvalidPdf(_)) {
+                if matches!(
+                    e,
+                    Error::InvalidPdf(_)
+                        | Error::InvalidObjectType { .. }
+                        | Error::CircularReference(_)
+                ) {
                     log::warn!("Page tree traversal failed ({}), trying fallback scan method", e);
                     self.get_page_by_scanning(page_index)
                 } else {
