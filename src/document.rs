@@ -2645,11 +2645,14 @@ impl PdfDocument {
             reason: "Page is not a dictionary".to_string(),
         })?;
 
-        // Get content stream(s)
-        let contents_ref = page_dict.get("Contents").ok_or_else(|| Error::ParseError {
-            offset: 0,
-            reason: "Page has no Contents".to_string(),
-        })?;
+        // Get content stream(s) — Contents is optional per ISO 32000-1:2008 Table 30
+        let contents_ref = match page_dict.get("Contents") {
+            Some(Object::Null) | None => {
+                log::debug!("Page {} has no /Contents (blank page)", page_index);
+                return Ok(Vec::new());
+            },
+            Some(c) => c,
+        };
 
         // Contents can be either a single stream, an array of streams, or a direct stream object
         let content_data = if let Some(contents_ref_val) = contents_ref.as_reference() {
@@ -4270,13 +4273,15 @@ impl PdfDocument {
                 // We extract all images referenced this way
                 Operator::Do { name } => {
                     if let Some(ref res) = resources {
-                        let current_ctm = ctm_stack.last().copied().unwrap_or_else(crate::content::Matrix::identity);
+                        let current_ctm = ctm_stack
+                            .last()
+                            .copied()
+                            .unwrap_or_else(crate::content::Matrix::identity);
                         match self.extract_images_from_xobject_do(&name, res, current_ctm) {
                             Ok(mut xobj_images) => {
                                 images.append(&mut xobj_images);
                             },
-                            Err(_) => {
-                            },
+                            Err(_) => {},
                         }
                     } else {
                     }
@@ -4284,7 +4289,10 @@ impl PdfDocument {
 
                 // Inline image operator
                 Operator::InlineImage { dict, data } => {
-                    let current_ctm = ctm_stack.last().copied().unwrap_or_else(crate::content::Matrix::identity);
+                    let current_ctm = ctm_stack
+                        .last()
+                        .copied()
+                        .unwrap_or_else(crate::content::Matrix::identity);
                     if let Ok(image) = self.extract_image_from_inline(&dict, &data, current_ctm) {
                         images.push(image);
                     }
@@ -4321,7 +4329,6 @@ impl PdfDocument {
     ) -> Result<Vec<crate::extractors::PdfImage>> {
         use crate::extractors::extract_image_from_xobject;
 
-
         let mut images = Vec::new();
 
         // Get XObject dictionary
@@ -4342,10 +4349,12 @@ impl PdfDocument {
             xobject_obj.clone()
         };
 
-        let xobject_dict = resolved_xobject_obj.as_dict().ok_or_else(|| Error::ParseError {
-            offset: 0,
-            reason: "XObject dictionary is not a dictionary".to_string(),
-        })?;
+        let xobject_dict = resolved_xobject_obj
+            .as_dict()
+            .ok_or_else(|| Error::ParseError {
+                offset: 0,
+                reason: "XObject dictionary is not a dictionary".to_string(),
+            })?;
 
         // Get the specific XObject by name
         let xobject_ref_obj = match xobject_dict.get(name) {
@@ -4371,10 +4380,8 @@ impl PdfDocument {
             .and_then(|s| s.as_name())
             .unwrap_or("");
 
-
         match subtype {
             "Image" => {
-
                 // For Stream objects, resolve any indirect references in the dictionary
                 let mut resolved_xobject = xobject.clone();
 
@@ -4420,8 +4427,7 @@ impl PdfDocument {
                             images.push(image);
                         }
                     },
-                    Err(_) => {
-                    },
+                    Err(_) => {},
                 }
             },
             "Form" => {
@@ -4521,7 +4527,10 @@ impl PdfDocument {
                 },
 
                 Operator::Do { name } => {
-                    let current_ctm = ctm_stack.last().copied().unwrap_or_else(crate::content::Matrix::identity);
+                    let current_ctm = ctm_stack
+                        .last()
+                        .copied()
+                        .unwrap_or_else(crate::content::Matrix::identity);
                     if let Ok(mut xobj_images) =
                         self.extract_images_from_xobject_do(&name, &form_resources, current_ctm)
                     {
@@ -4530,7 +4539,10 @@ impl PdfDocument {
                 },
 
                 Operator::InlineImage { dict, data } => {
-                    let current_ctm = ctm_stack.last().copied().unwrap_or_else(crate::content::Matrix::identity);
+                    let current_ctm = ctm_stack
+                        .last()
+                        .copied()
+                        .unwrap_or_else(crate::content::Matrix::identity);
                     if let Ok(image) = self.extract_image_from_inline(&dict, &data, current_ctm) {
                         images.push(image);
                     }
@@ -4563,7 +4575,8 @@ impl PdfDocument {
         };
 
         // Use existing extraction logic
-        let mut image = crate::extractors::extract_image_from_xobject(Some(self), &stream_obj, None)?;
+        let mut image =
+            crate::extractors::extract_image_from_xobject(Some(self), &stream_obj, None)?;
 
         // Apply CTM to create bbox
         let width = image.width() as f32;
@@ -4600,7 +4613,12 @@ impl PdfDocument {
         let width = (x1 - x2).abs();
         let height = (y1 - y2).abs();
 
-        crate::geometry::Rect { x, y, width, height }
+        crate::geometry::Rect {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 
     /// Parse a Matrix object from PDF.
