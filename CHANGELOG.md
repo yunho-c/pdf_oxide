@@ -2,6 +2,81 @@
 
 All notable changes to PDFOxide are documented here.
 
+## [0.3.7] - 2026-02-19
+> Text Extraction Quality: 95.7% to 99.6% Clean Rate
+
+### Verified — 3,829-PDF Corpus (v0.3.6 → v0.3.7)
+
+| Metric | v0.3.6 | v0.3.7 | Change |
+|--------|--------|--------|--------|
+| **Clean rate** | 95.7% | **99.6%** | 3,812 of 3,829 PDFs |
+| **Dirty PDFs** | 165 | **17** | **-90%** |
+
+Systematic benchmark testing across 3,829 real-world PDFs identified and fixed 13 text extraction issues.
+
+### Added — Parser & Decoders
+
+- **BrotliDecode stream filter** (PDF 2.0, ISO 32000-2:2020) — New `BrotliDecoder` for PDFs using Brotli-compressed streams (#95)
+- **Xref trailer selection** — Prefer trailer with `/Root` key when multiple trailers exist, fixing files where the wrong trailer was selected
+- **Headerless PDF recovery** — Search for first object marker when `%PDF-` header is missing
+- **Multi-line object headers** — Handle `1 0\nobj` format used by Google-generated PDFs
+- **Cross-reference stream reconstruction** — Rebuild xref from object markers for damaged PDFs
+
+### Added — Font Encoding
+
+- **CFF font encoding parser** (`src/fonts/cff_encoding.rs`) — Parse CFF/OpenType font programs to extract character encoding when no ToUnicode CMap is present (#87, #99)
+- **Type1 font encoding parser** (`src/fonts/type1_encoding.rs`) — Parse embedded Type 1 font programs for `/Encoding` arrays with `dup CODE /GLYPHNAME put` patterns (#89)
+- **80K+ CID-to-Unicode mappings** — Expanded Adobe-CNS1 (+18K), Adobe-GB1 (+30K), Adobe-Japan1 (+15K), Adobe-Korea1 (+17K) character collections (#98)
+- **Shift-JIS/RKSJ decoding** — Added `encoding_rs` dependency for Japanese Shift-JIS encoded CMap streams (#100)
+- **TeX math glyph names** — Map MSAM, MSBM, and Computer Modern glyph names to Unicode equivalents
+- **Identity-H cmap propagation** — Propagate TrueType cmap tables from CIDFont descendants to Type0 parent fonts (#91)
+- **Cross-font cmap sharing** — Share TrueType cmap tables across Identity-H fonts that lack embedded encoding data (#91)
+
+### Fixed — Text Extraction Pipeline
+
+- **Tf buffer flush** — Flush pending text buffer on font switch (`Tf` operator) to prevent text loss when multiple fonts are used in the same text block (#88)
+- **Adaptive space threshold** — Replace fixed 0.25em threshold with bbox-based adaptive spacing, eliminating spurious spaces in tightly-set text (#97)
+- **Span deduplication** — Deduplicate overlapping text spans rendered multiple times at the same position (used for bold/shadow effects in some PDFs) (#102)
+- **Character deduplication** — Remove duplicate characters within 2pt horizontal distance on the same line (#102)
+- **BT operator check removal** — Remove incorrect content stream validation that silently skipped valid text blocks, causing empty output (#101)
+- **ByteMode decoding** — Properly handle 1-byte, 2-byte (Identity-H/UCS2), and variable-width (Shift-JIS) character code decoding (#100, #103)
+- **Annotation text extraction** — Extract text from Widget (form field), FreeText, and appearance stream annotations (#92)
+- **Metadata string filtering** — Filter leaked WhitePoint, BlackPoint, and CalRGB metadata from extracted text output
+- **ToUnicode control character fallback** — Fall back to font encoding when ToUnicode maps to control characters
+
+### Fixed — Font Handling
+
+- **TrueType cmap format 4** — Fix off-by-one in segment endCode comparison for format 4 lookup tables (#98)
+- **CMap byte-width detection** — Detect CMap input code width from `begincodespacerange` for proper multi-byte decoding
+- **CMap bfrange array targets** — Handle `bfrange` entries with array targets (mapping ranges to non-contiguous Unicode sequences)
+- **Symbolic font encoding** — Correct encoding resolution order for symbolic fonts without explicit `/Encoding`
+
+### Added — Tooling
+
+- **Benchmark suite** — `bench_extract_all` example for corpus-wide extraction benchmarking
+- **Comparison scripts** — `bench_compare.py` (pdf_oxide vs PyMuPDF), `bench_pymupdf.py`, `export_text_comparison.py` for side-by-side quality analysis
+- **Regression tests** — 11 new regression tests in `test_v037_regressions.rs` covering all major fixes
+
+### Issues Resolved
+
+| Closes | Description |
+|--------|-------------|
+| #87 | Custom encoding producing garbage text |
+| #88 | Multi-font text loss on Tf switch |
+| #89 | Type1 subset font encoding not parsed |
+| #91 | Identity-H fonts missing cmap propagation |
+| #92 | Annotation/form field text not extracted |
+| #95 | BrotliDecode stream filter not supported |
+| #97 | Spurious spaces from fixed threshold |
+| #98 | CID/ToUnicode producing U+FFFD replacements |
+| #99 | Font encoding offset errors |
+| #100 | Raw bytes emitted instead of decoded text |
+| #101 | Empty output from valid content streams |
+| #102 | Overlapping duplicate text not deduplicated |
+| #103 | Character fragmentation from byte-width errors |
+
+Ref #90, #93, #94, #96, #104, #105
+
 ## [0.3.6] - 2026-02-16
 > Performance: Two Critical O(n) Bottlenecks Eliminated
 
