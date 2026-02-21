@@ -2,6 +2,43 @@
 
 All notable changes to PDFOxide are documented here.
 
+## [0.3.8] - 2026-02-20
+> Performance: Text-Only Parser — Graphics-Heavy Pages 10-30x Faster
+
+### Performance
+
+- **Text-only content stream parser** (#110) — New `parse_content_stream_text_only()` fast path skips graphics operators outside BT/ET blocks using byte-level scanning instead of full nom parsing. Only text-affecting operators are returned.
+
+- **Byte-level graphics scanner** (#112) — Replaced nom-based operand loop with raw index arithmetic in `scan_graphics_region()`. Processes digits, dots, and whitespace at near-memcpy speed, skipping path coordinates without constructing any Objects.
+
+- **Skip color operators in scanner** (#114) — Added 12 color operators (`rg`, `RG`, `g`, `G`, `k`, `K`, `cs`, `CS`, `sc`, `SC`, `scn`, `SCN`) to the byte-level skip list. Pure color state changes never affect text content or positioning.
+
+- **Defer q/cm/Q emission until text confirmed** (#116) — Graphics state save/restore (`q`/`Q`) and CTM transforms (`cm`) outside BT/ET are deferred rather than immediately parsed. If a `q...Q` block contains no text-triggering operator (BT, BI, Do), all its state ops are silently discarded. When text IS found, the deferred region is re-parsed to preserve CTM. Eliminates ~75% of remaining backtrack overhead on graphics-heavy pages.
+
+- **Arc-wrap FontInfo cache** (#111) — Font cache entries wrapped in `Arc` to avoid cloning full FontInfo structs. Removed eager CMap validation that blocked font loading on partially-valid CMap streams.
+
+- **O(n) page map construction** — Rewrote `build_page_map` as single-pass traversal with parse budgets, replacing recursive descent that could degenerate on deeply nested page trees.
+
+- **Structure tree optimization** — Arc-cached structure tree with batch traversal; skip ParentTree parsing for non-tagged content.
+
+- **XObject name→ref cache** — Cache XObject dictionary lookups to eliminate O(n²) dictionary cloning on pages with many XObject references.
+
+### Verified — 3,829-PDF Corpus
+
+- **0 new errors** — All 3,829 PDFs extract successfully (7 pre-existing failures on intentionally broken test fixtures)
+- **1,712 unit tests passing** — Zero failures, zero warnings
+- **Clippy clean** — `cargo clippy -- -D warnings` passes
+
+### Issues Resolved
+
+| Closes | Description |
+|--------|-------------|
+| #110 | Add text-only content stream parser fast path |
+| #111 | Arc-wrap FontInfo cache, remove eager CMap validation |
+| #112 | Replace nom-based operand loop with byte-level scanner |
+| #114 | Skip color operators in graphics scanner |
+| #116 | Defer q/cm/Q emission until text is confirmed |
+
 ## [0.3.7] - 2026-02-19
 > Text Extraction Quality: 95.7% to 99.6% Clean Rate
 
