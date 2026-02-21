@@ -2968,7 +2968,7 @@ impl PdfDocument {
     /// Per §9.4.3, text-showing operators shall only appear within BT...ET text
     /// objects. However, a page may contain text only inside Form XObjects
     /// referenced via `Do` operators, so we must also check for those.
-    fn may_contain_text(data: &[u8]) -> bool {
+    pub(crate) fn may_contain_text(data: &[u8]) -> bool {
         // PDF delimiter characters per ISO 32000-1:2008 Table 2
         fn is_delimiter(b: u8) -> bool {
             matches!(b, b'(' | b')' | b'<' | b'>' | b'[' | b']' | b'{' | b'}' | b'/' | b'%')
