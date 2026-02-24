@@ -5344,6 +5344,20 @@ impl TextExtractor {
             // Calculate rotation from matrix: atan2(b, a)
             let rotation_degrees = final_matrix.b.atan2(final_matrix.a).to_degrees();
 
+            // Guard against malformed fonts that map a single byte to an unreasonably
+            // long Unicode string (e.g., 1024 repeated chars from corrupted CMap/encoding).
+            // Normal mappings produce 1-4 chars (single char, ligature, or combining sequence).
+            let unicode_string = if unicode_string.chars().count() > 8 {
+                log::warn!(
+                    "Malformed character mapping: code 0x{:04X} maps to {} chars, truncating",
+                    char_code,
+                    unicode_string.chars().count()
+                );
+                unicode_string.chars().next().unwrap_or('?').to_string()
+            } else {
+                unicode_string
+            };
+
             // Process each character in the expanded string
             // For ligatures (e.g., "fi" from ﬁ), we create multiple TextChar objects
             // and distribute them horizontally across the glyph width
