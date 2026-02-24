@@ -2505,6 +2505,45 @@ impl PdfDocument {
         Ok(cleaned_text)
     }
 
+    /// Extract text from all pages of the document.
+    ///
+    /// Concatenates text from every page, separated by form feed characters (`\x0c`).
+    /// This is a convenience method equivalent to calling `extract_text()` for each page.
+    ///
+    /// # Returns
+    ///
+    /// The combined text from all pages.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use pdf_oxide::document::PdfDocument;
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut doc = PdfDocument::open("paper.pdf")?;
+    /// let all_text = doc.extract_all_text()?;
+    /// println!("Full document: {} chars", all_text.len());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn extract_all_text(&mut self) -> Result<String> {
+        let num_pages = self.page_count()?;
+        let mut result = String::new();
+
+        for i in 0..num_pages {
+            if i > 0 {
+                result.push('\x0c'); // Form feed page separator
+            }
+            match self.extract_text(i) {
+                Ok(text) => result.push_str(&text),
+                Err(e) => {
+                    log::warn!("Failed to extract text from page {}: {}", i, e);
+                },
+            }
+        }
+
+        Ok(result)
+    }
+
     /// Extract text from a page with automatic OCR fallback for scanned pages.
     ///
     /// This method automatically detects scanned pages and applies OCR when needed,
