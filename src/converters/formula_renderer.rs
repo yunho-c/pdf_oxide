@@ -279,6 +279,7 @@ mod tests {
             alt_text: None,
             expansion: None,
             actual_text: None,
+            source_role: None,
         };
 
         let mut mcids = Vec::new();

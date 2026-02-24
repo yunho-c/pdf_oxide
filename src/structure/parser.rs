@@ -293,10 +293,15 @@ fn parse_struct_elem(
     };
 
     // Map custom types to standard types using RoleMap
-    let struct_type_str = role_map.get(s_name).map(|s| s.as_str()).unwrap_or(s_name);
+    // Preserve the original role name when mapping occurs
+    let mapped = role_map.get(s_name);
+    let struct_type_str = mapped.map(|s| s.as_str()).unwrap_or(s_name);
     let struct_type = StructType::from_str(struct_type_str);
 
     let mut struct_elem = StructElem::new(struct_type);
+    if mapped.is_some() {
+        struct_elem.source_role = Some(s_name.to_string());
+    }
 
     // Get /Pg (page) - optional, resolve to page number
     if let Some(Object::Reference(pg_ref)) = dict.get("Pg") {

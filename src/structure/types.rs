@@ -85,6 +85,12 @@ pub struct StructElem {
     /// Per PDF spec Section 14.9.4, /ActualText provides exact replacement text
     /// for structure elements, overriding all descendant content.
     pub actual_text: Option<String>,
+
+    /// Original role name before RoleMap resolution (optional).
+    /// When a custom structure type (e.g., "Heading1") is mapped to a standard
+    /// type (e.g., "H1") via the RoleMap, this field preserves the original name.
+    /// None when the element's /S value is already a standard type.
+    pub source_role: Option<String>,
 }
 
 impl StructElem {
@@ -98,6 +104,7 @@ impl StructElem {
             alt_text: None,
             expansion: None,
             actual_text: None,
+            source_role: None,
         }
     }
 
