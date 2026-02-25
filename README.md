@@ -84,9 +84,9 @@ Benchmarked on 3,830 PDFs from three independent public test suites (veraPDF, Mo
 
 | Suite | PDFs | Pass Rate |
 |-------|-----:|----------:|
-| veraPDF (PDF/A compliance) | 2,907 | 100% |
-| Mozilla pdf.js | 897 | 99.2% |
-| SafeDocs (targeted edge cases) | 26 | 100% |
+| [veraPDF](https://github.com/veraPDF/veraPDF-corpus) (PDF/A compliance) | 2,907 | 100% |
+| [Mozilla pdf.js](https://github.com/mozilla/pdf.js/tree/master/test/pdfs) | 897 | 99.2% |
+| [SafeDocs](https://github.com/pdf-association/safedocs) (targeted edge cases) | 26 | 100% |
 | **Total** | **3,830** | **100%** |
 
 100% pass rate on all valid PDFs — the 7 non-passing files across the corpus are intentionally broken test fixtures (missing PDF header, fuzz-corrupted catalogs, invalid xref streams).
