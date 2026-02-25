@@ -1559,12 +1559,6 @@ fn skip_dict_raw(data: &[u8], i: usize) -> Option<usize> {
     }
 }
 
-/// Scan a graphics region using raw byte arithmetic, skipping path/clipping
-/// operators and their operands without constructing any Objects.
-///
-/// Returns on: end of data, BT, BI, non-skippable operator, or too many
-/// consecutive errors. The caller dispatches on the result to resume text
-/// parsing, handle inline images, or backtrack for full operator parsing.
 // ── Fast BT/ET block parser ────────────────────────────────────────────
 //
 // Hand-written byte-level parser for operators inside text blocks.

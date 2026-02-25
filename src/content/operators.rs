@@ -8,6 +8,7 @@ use crate::object::Object;
 
 /// A content stream operator.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::box_collection)] // Intentional: Boxing reduces enum from 112 to 40 bytes (#150)
 pub enum Operator {
     // Text positioning operators
     /// Move text position (Td)

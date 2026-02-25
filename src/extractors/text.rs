@@ -5310,22 +5310,20 @@ impl TextExtractor {
                     let c = char_table[byte as usize];
                     if c != '\0' {
                         buffer.unicode.push(c);
-                    } else {
-                        if let Some(s) = font.char_to_unicode(byte as u32) {
-                            if s != "\u{FFFD}" {
-                                for ch in s.chars() {
-                                    if ch >= '\x20' || ch == '\t' || ch == '\n' || ch == '\r' {
-                                        buffer.unicode.push(ch);
-                                    }
+                    } else if let Some(s) = font.char_to_unicode(byte as u32) {
+                        if s != "\u{FFFD}" {
+                            for ch in s.chars() {
+                                if ch >= '\x20' || ch == '\t' || ch == '\n' || ch == '\r' {
+                                    buffer.unicode.push(ch);
                                 }
                             }
-                        } else {
-                            let fb = fallback_char_to_unicode(byte as u32);
-                            if fb != "\u{FFFD}" {
-                                for ch in fb.chars() {
-                                    if ch >= '\x20' || ch == '\t' || ch == '\n' || ch == '\r' {
-                                        buffer.unicode.push(ch);
-                                    }
+                        }
+                    } else {
+                        let fb = fallback_char_to_unicode(byte as u32);
+                        if fb != "\u{FFFD}" {
+                            for ch in fb.chars() {
+                                if ch >= '\x20' || ch == '\t' || ch == '\n' || ch == '\r' {
+                                    buffer.unicode.push(ch);
                                 }
                             }
                         }

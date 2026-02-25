@@ -92,9 +92,9 @@ pub struct PdfDocument {
     /// (font_name, content_hash) pair for verification before reuse.
     font_name_set_cache:
         HashMap<u64, (Arc<Vec<(String, Arc<crate::fonts::FontInfo>)>>, String, u64)>,
-    /// Per-font identity cache keyed by font_identity_hash (BaseFont + Subtype + Encoding
-    /// + ToUnicode + FontDescriptor + DescendantFonts references). Skips expensive
-    /// FontInfo::from_dict() when a structurally identical font was already parsed.
+    /// Per-font identity cache keyed by font_identity_hash (BaseFont + Subtype + Encoding +
+    /// ToUnicode + FontDescriptor + DescendantFonts references). Skips expensive
+    /// `FontInfo::from_dict()` when a structurally identical font was already parsed.
     font_identity_cache: HashMap<u64, Arc<crate::fonts::FontInfo>>,
     /// Cached structure tree (None = not yet checked, Some(None) = untagged, Some(Some) = tagged).
     /// Uses Arc to avoid expensive deep clones on every page extraction.

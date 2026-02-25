@@ -5352,7 +5352,7 @@ impl DocumentEditor {
             },
             Operator::BeginMarkedContentDict { tag, properties } => {
                 output.extend_from_slice(format!("/{} ", tag).as_bytes());
-                self.serialize_object(output, &properties);
+                self.serialize_object(output, properties);
                 output.extend_from_slice(b" BDC\n");
             },
             Operator::EndMarkedContent => output.extend_from_slice(b"EMC\n"),
