@@ -1617,6 +1617,23 @@ fn parse_float_fast(data: &[u8]) -> Option<(f32, usize)> {
 fn parse_literal_string_fast(data: &[u8], start: usize) -> Option<(Vec<u8>, usize)> {
     let mut i = start + 1; // past opening '('
     let mut depth: u32 = 1;
+
+    // Fast path: scan for simple strings without escapes or nested parens.
+    // Most PDF strings are simple ASCII text like "(Hello)" or single chars like "(A)".
+    let scan_start = i;
+    while i < data.len() {
+        match data[i] {
+            b')' => {
+                // Simple string — no escapes, no nesting
+                return Some((data[scan_start..i].to_vec(), i + 1));
+            },
+            b'\\' | b'(' => break, // needs complex handling
+            _ => i += 1,
+        }
+    }
+
+    // Slow path: string has escapes or nested parens
+    i = scan_start;
     let mut result = Vec::new();
     while i < data.len() && depth > 0 {
         match data[i] {

@@ -5083,13 +5083,12 @@ impl TextExtractor {
     /// Returns the computed width so callers can accumulate it.
     fn advance_position_for_string(&mut self, text: &[u8]) -> Result<f32> {
         let state = self.state_stack.current();
-        let font_name = state.font_name.clone();
         let font_size = state.font_size;
         let horizontal_scaling = state.horizontal_scaling;
         let char_space = state.char_space;
         let word_space = state.word_space;
 
-        let font = font_name.as_ref().and_then(|name| self.fonts.get(name));
+        let font = state.font_name.as_ref().and_then(|name| self.fonts.get(name));
 
         // Calculate total width per PDF spec
         let mut total_width = 0.0;
