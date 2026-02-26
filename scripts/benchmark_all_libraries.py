@@ -14,6 +14,7 @@ Tests the top 10 Python PDF libraries + our Rust library on the PDF corpus:
 9. pikepdf
 10. borb
 11. pypdfium2
+12. playa-pdf
 
 Outputs markdown files to separate directories for comparison.
 """
@@ -41,6 +42,7 @@ def check_library_availability():
         "pikepdf": "pikepdf",
         "borb": "borb",
         "pypdfium2": "pypdfium2",
+        "playa-pdf": "playa",
     }
 
     for name, import_name in libraries.items():
@@ -161,6 +163,21 @@ def extract_with_pdfminer(pdf_path, output_path):
     return len(text)
 
 
+def extract_with_playa(pdf_path, output_path):
+    """Extract text with PLAYA-PDF."""
+    import playa
+
+    # PLAYA-PDF is more for PDF exploration than text extraction
+    # Basic text extraction only
+    with playa.open(pdf_path) as pdf:
+        text = "\n\n".join(pdf.pages.map(playa.Page.extract_text))
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+    return len(text)
+
+
 def extract_with_pikepdf(pdf_path, output_path):
     """Extract text with pikepdf (basic extraction)."""
     import pikepdf
@@ -243,6 +260,7 @@ EXTRACTORS = {
     "pikepdf": extract_with_pikepdf,
     "borb": extract_with_borb,
     "pypdfium2": extract_with_pypdfium2,
+    "playa-pdf": extract_with_playa,
 }
 
 

@@ -69,8 +69,9 @@ benchmark = [
     "pymupdf4llm>=0.0.17",
     "pdfplumber>=0.11.5",
     "pypdf>=5.9.0",
-    "pdfminer>=20191125",
     "pypdfium2>=5.3.0",
+    "pdfminer-six>=20231228",
+    "playa-pdf>=1.0.0",
 ]
 seg-edgar = [
     "sec-edgar-downloader>=5.0.3",
