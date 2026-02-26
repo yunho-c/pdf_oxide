@@ -113,7 +113,7 @@ fn decode_lzw_custom(input: &[u8]) -> Result<Vec<u8>> {
         } else if code == next_code && prev_code.is_some() {
             // Special case: code == next_code
             // String is prev_string + prev_string[0]
-            let prev_string = table.get(&prev_code.unwrap()).unwrap();
+            let prev_string = table.get(&prev_code.expect("checked is_some above")).expect("prev code exists in table");
             let mut s = prev_string.clone();
             s.push(prev_string[0]);
             s
@@ -130,7 +130,7 @@ fn decode_lzw_custom(input: &[u8]) -> Result<Vec<u8>> {
         // Add new entry to table
         if let Some(prev) = prev_code {
             if next_code < 4096 {
-                let prev_string = table.get(&prev).unwrap();
+                let prev_string = table.get(&prev).expect("prev code exists in table");
                 let mut new_string = prev_string.clone();
                 new_string.push(string[0]);
                 table.insert(next_code, new_string);

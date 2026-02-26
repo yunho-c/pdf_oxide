@@ -255,24 +255,24 @@ impl SpanMergingDebugger {
     pub fn generate_page_report(&self, page_num: usize) -> String {
         let mut report = String::new();
 
-        writeln!(report, "=== PAGE {} SPAN MERGING ANALYSIS ===", page_num).unwrap();
-        writeln!(report).unwrap();
+        writeln!(report, "=== PAGE {} SPAN MERGING ANALYSIS ===", page_num).expect("write to String");
+        writeln!(report).expect("write to String");
 
         // Find page stats
         if let Some(stats) = self.page_stats.iter().find(|s| s.page_num == page_num) {
             writeln!(report, "Extracted {} spans from page {}", stats.span_count, page_num)
-                .unwrap();
-            writeln!(report).unwrap();
-            writeln!(report, "Gap Statistics:").unwrap();
-            writeln!(report, "  Total gaps: {}", stats.gap_count).unwrap();
-            writeln!(report, "  Positive gaps: {}", stats.positive_gaps).unwrap();
-            writeln!(report, "  Negative gaps (overlaps): {}", stats.negative_gaps).unwrap();
-            writeln!(report, "  Min: {:.2}pt", stats.min_gap).unwrap();
-            writeln!(report, "  Max: {:.2}pt", stats.max_gap).unwrap();
-            writeln!(report, "  Mean: {:.2}pt", stats.mean_gap).unwrap();
-            writeln!(report, "  Median: {:.2}pt", stats.median_gap).unwrap();
-            writeln!(report, "  P25: {:.2}pt, P75: {:.2}pt", stats.p25, stats.p75).unwrap();
-            writeln!(report).unwrap();
+                .expect("write to String");
+            writeln!(report).expect("write to String");
+            writeln!(report, "Gap Statistics:").expect("write to String");
+            writeln!(report, "  Total gaps: {}", stats.gap_count).expect("write to String");
+            writeln!(report, "  Positive gaps: {}", stats.positive_gaps).expect("write to String");
+            writeln!(report, "  Negative gaps (overlaps): {}", stats.negative_gaps).expect("write to String");
+            writeln!(report, "  Min: {:.2}pt", stats.min_gap).expect("write to String");
+            writeln!(report, "  Max: {:.2}pt", stats.max_gap).expect("write to String");
+            writeln!(report, "  Mean: {:.2}pt", stats.mean_gap).expect("write to String");
+            writeln!(report, "  Median: {:.2}pt", stats.median_gap).expect("write to String");
+            writeln!(report, "  P25: {:.2}pt, P75: {:.2}pt", stats.p25, stats.p75).expect("write to String");
+            writeln!(report).expect("write to String");
         }
 
         // Find threshold computation
@@ -281,39 +281,39 @@ impl SpanMergingDebugger {
             .iter()
             .find(|t| t.page_num == page_num)
         {
-            writeln!(report, "Adaptive Threshold Computation:").unwrap();
+            writeln!(report, "Adaptive Threshold Computation:").expect("write to String");
             writeln!(
                 report,
                 "  Config: {} [multiplier={}, min={}pt, max={}pt]",
                 thresh.config_name, thresh.multiplier, thresh.min_threshold, thresh.max_threshold
             )
-            .unwrap();
+            .expect("write to String");
             if thresh.used_bimodal {
-                writeln!(report, "  Method: Bimodal detection").unwrap();
+                writeln!(report, "  Method: Bimodal detection").expect("write to String");
             } else {
-                writeln!(report, "  Median gap: {:.2}pt", thresh.median_gap).unwrap();
+                writeln!(report, "  Median gap: {:.2}pt", thresh.median_gap).expect("write to String");
                 writeln!(
                     report,
                     "  Computed: {:.2}pt * {} = {:.2}pt",
                     thresh.median_gap, thresh.multiplier, thresh.computed_raw
                 )
-                .unwrap();
+                .expect("write to String");
             }
             writeln!(
                 report,
                 "  Clamped to: {:.2}pt (within [{}, {}])",
                 thresh.computed_final, thresh.min_threshold, thresh.max_threshold
             )
-            .unwrap();
-            writeln!(report, "  Reason: {}", thresh.reason).unwrap();
-            writeln!(report).unwrap();
+            .expect("write to String");
+            writeln!(report, "  Reason: {}", thresh.reason).expect("write to String");
+            writeln!(report).expect("write to String");
         }
 
         // Gap decisions for this page
         let page_decisions: Vec<_> = self.gap_decisions.iter().collect();
 
         if !page_decisions.is_empty() {
-            writeln!(report, "Space Insertion Analysis (first 30 gaps):").unwrap();
+            writeln!(report, "Space Insertion Analysis (first 30 gaps):").expect("write to String");
             for (i, decision) in page_decisions.iter().take(30).enumerate() {
                 writeln!(
                     report,
@@ -323,7 +323,7 @@ impl SpanMergingDebugger {
                     decision.left_text,
                     decision.right_text
                 )
-                .unwrap();
+                .expect("write to String");
                 writeln!(
                     report,
                     "    - needs_space_by_gap ({:.2}pt): {} ({:.2} {} {:.2})",
@@ -341,7 +341,7 @@ impl SpanMergingDebugger {
                     },
                     decision.space_threshold_pt
                 )
-                .unwrap();
+                .expect("write to String");
                 writeln!(
                     report,
                     "    - needs_space_by_heuristic: {}",
@@ -351,7 +351,7 @@ impl SpanMergingDebugger {
                         "NO"
                     }
                 )
-                .unwrap();
+                .expect("write to String");
                 writeln!(
                     report,
                     "    - needs_space_by_adaptive ({:.2}pt): {} ({:.2} {} {:.2})",
@@ -369,14 +369,14 @@ impl SpanMergingDebugger {
                     },
                     decision.adaptive_threshold_pt
                 )
-                .unwrap();
+                .expect("write to String");
                 let marker = if decision.space_inserted {
                     "SPACE INSERTED"
                 } else {
                     "NO SPACE"
                 };
-                writeln!(report, "    -> {} ({})", marker, decision.reason).unwrap();
-                writeln!(report).unwrap();
+                writeln!(report, "    -> {} ({})", marker, decision.reason).expect("write to String");
+                writeln!(report).expect("write to String");
             }
         }
 
@@ -387,17 +387,17 @@ impl SpanMergingDebugger {
     pub fn generate_summary(&self) -> String {
         let mut report = String::new();
 
-        writeln!(report, "=== SPAN MERGING SUMMARY ===").unwrap();
-        writeln!(report).unwrap();
-        writeln!(report, "Total Spaces Inserted: {}", self.total_spaces_inserted).unwrap();
-        writeln!(report, "  - By adaptive threshold: {} spaces", self.spaces_by_adaptive).unwrap();
-        writeln!(report, "  - By heuristic: {} spaces", self.spaces_by_heuristic).unwrap();
+        writeln!(report, "=== SPAN MERGING SUMMARY ===").expect("write to String");
+        writeln!(report).expect("write to String");
+        writeln!(report, "Total Spaces Inserted: {}", self.total_spaces_inserted).expect("write to String");
+        writeln!(report, "  - By adaptive threshold: {} spaces", self.spaces_by_adaptive).expect("write to String");
+        writeln!(report, "  - By heuristic: {} spaces", self.spaces_by_heuristic).expect("write to String");
         writeln!(report, "  - By both (adaptive+heuristic): {} spaces", self.spaces_by_both)
-            .unwrap();
-        writeln!(report).unwrap();
+            .expect("write to String");
+        writeln!(report).expect("write to String");
 
         // Per-page threshold summary
-        writeln!(report, "Per-Page Adaptive Thresholds:").unwrap();
+        writeln!(report, "Per-Page Adaptive Thresholds:").expect("write to String");
         for thresh in &self.threshold_computations {
             writeln!(
                 report,
@@ -411,7 +411,7 @@ impl SpanMergingDebugger {
                     "median*multiplier"
                 }
             )
-            .unwrap();
+            .expect("write to String");
         }
 
         report
@@ -443,7 +443,7 @@ pub fn compute_page_gap_stats(page_num: usize, spans: &[TextSpan]) -> PageGapSta
     // Compute median and percentiles from positive gaps
     let (median, p25, p75) = if !positive_gaps.is_empty() {
         let mut sorted = positive_gaps.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.total_cmp(b));
         let len = sorted.len();
         let median = sorted[len / 2];
         let p25 = sorted[len / 4];

@@ -175,7 +175,7 @@ impl DebugVisualizer {
         let width = rgba.width();
         let height = rgba.height();
 
-        Pixmap::from_vec(rgba.into_raw(), tiny_skia::IntSize::from_wh(width, height).unwrap())
+        Pixmap::from_vec(rgba.into_raw(), tiny_skia::IntSize::from_wh(width, height).expect("valid image dimensions"))
             .ok_or_else(|| Error::InvalidPdf("Failed to create pixmap".to_string()))
     }
 
@@ -258,7 +258,7 @@ impl DebugVisualizer {
         let mut path = PathBuilder::new();
         path.push_rect(
             tiny_skia::Rect::from_xywh(rect.x, rect.y, rect.width, rect.height)
-                .unwrap_or(tiny_skia::Rect::from_xywh(0.0, 0.0, 1.0, 1.0).unwrap()),
+                .unwrap_or(tiny_skia::Rect::from_xywh(0.0, 0.0, 1.0, 1.0).expect("valid fallback rect")),
         );
 
         if let Some(path) = path.finish() {

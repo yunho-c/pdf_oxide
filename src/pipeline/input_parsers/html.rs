@@ -84,7 +84,7 @@ impl InputParser for HtmlParser {
                     "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => {
                         if !closing {
                             let level: u8 =
-                                tag_type.chars().last().unwrap().to_digit(10).unwrap() as u8;
+                                tag_type.chars().last().expect("heading tag has last char").to_digit(10).expect("heading tag ends in digit") as u8;
                             current_style.heading_level = Some(level);
                             current_style.bold = level <= 2;
                         } else {

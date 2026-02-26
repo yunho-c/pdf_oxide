@@ -154,19 +154,6 @@ impl ParserOptions {
         }
     }
 
-    /// Check if we should continue parsing after an error
-    #[allow(dead_code)]
-    pub(crate) fn should_continue(&self, error_count: usize) -> bool {
-        if self.strict {
-            return false;
-        }
-
-        if self.max_errors == 0 {
-            return true; // Unlimited errors
-        }
-
-        error_count < self.max_errors
-    }
 }
 
 #[cfg(test)]
@@ -189,18 +176,4 @@ mod tests {
         assert!(opts.allow_missing_endobj);
     }
 
-    #[test]
-    fn test_should_continue() {
-        let strict = ParserOptions::strict();
-        assert!(!strict.should_continue(0));
-
-        let lenient = ParserOptions::lenient();
-        assert!(lenient.should_continue(0));
-        assert!(lenient.should_continue(999));
-        assert!(!lenient.should_continue(1000));
-
-        let very_lenient = ParserOptions::very_lenient();
-        assert!(very_lenient.should_continue(0));
-        assert!(very_lenient.should_continue(10000));
-    }
 }

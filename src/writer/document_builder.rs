@@ -763,35 +763,6 @@ impl Default for DocumentBuilder {
     }
 }
 
-/// Simple word wrapping utility.
-#[allow(dead_code)]
-fn wrap_text(text: &str, max_chars: usize) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut current_line = String::new();
-
-    for word in text.split_whitespace() {
-        if current_line.is_empty() {
-            current_line = word.to_string();
-        } else if current_line.len() + 1 + word.len() <= max_chars {
-            current_line.push(' ');
-            current_line.push_str(word);
-        } else {
-            lines.push(current_line);
-            current_line = word.to_string();
-        }
-    }
-
-    if !current_line.is_empty() {
-        lines.push(current_line);
-    }
-
-    if lines.is_empty() {
-        lines.push(String::new());
-    }
-
-    lines
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -814,23 +785,6 @@ mod tests {
         assert_eq!(meta.title, Some("Test Title".to_string()));
         assert_eq!(meta.author, Some("Test Author".to_string()));
         assert_eq!(meta.subject, Some("Test Subject".to_string()));
-    }
-
-    #[test]
-    fn test_wrap_text() {
-        let text = "This is a test of the word wrapping function";
-        let wrapped = wrap_text(text, 20);
-        assert!(wrapped.len() > 1);
-        for line in &wrapped {
-            assert!(line.len() <= 20 || line.split_whitespace().count() == 1);
-        }
-    }
-
-    #[test]
-    fn test_wrap_text_empty() {
-        let wrapped = wrap_text("", 20);
-        assert_eq!(wrapped.len(), 1);
-        assert_eq!(wrapped[0], "");
     }
 
     #[test]

@@ -13,13 +13,10 @@ use aes::cipher::{BlockDecryptMut, BlockEncryptMut, KeyIvInit};
 use aes::{Aes128, Aes256};
 use cbc::{Decryptor, Encryptor};
 
-#[allow(dead_code)]
 type Aes128CbcEnc = Encryptor<Aes128>;
 type Aes128CbcDec = Decryptor<Aes128>;
 
-#[allow(dead_code)]
 type Aes256CbcEnc = Encryptor<Aes256>;
-#[allow(dead_code)]
 type Aes256CbcDec = Decryptor<Aes256>;
 
 /// Encrypt data using AES-128 in CBC mode with PKCS#7 padding.
@@ -33,7 +30,6 @@ type Aes256CbcDec = Decryptor<Aes256>;
 /// # Returns
 ///
 /// The encrypted data with PKCS#7 padding, or an error if encryption fails
-#[allow(dead_code)]
 pub fn aes128_encrypt(key: &[u8], iv: &[u8], data: &[u8]) -> Result<Vec<u8>, &'static str> {
     if key.len() != 16 {
         return Err("AES-128 key must be 16 bytes");
@@ -186,7 +182,6 @@ pub fn aes128_decrypt(key: &[u8], iv: &[u8], data: &[u8]) -> Result<Vec<u8>, &'s
 /// # Returns
 ///
 /// The encrypted data with PKCS#7 padding, or an error if encryption fails
-#[allow(dead_code)]
 pub fn aes256_encrypt(key: &[u8], iv: &[u8], data: &[u8]) -> Result<Vec<u8>, &'static str> {
     if key.len() != 32 {
         return Err("AES-256 key must be 32 bytes");
@@ -223,7 +218,6 @@ pub fn aes256_encrypt(key: &[u8], iv: &[u8], data: &[u8]) -> Result<Vec<u8>, &'s
 /// # Returns
 ///
 /// The decrypted data with padding removed, or an error if decryption fails
-#[allow(dead_code)]
 pub fn aes256_decrypt(key: &[u8], iv: &[u8], data: &[u8]) -> Result<Vec<u8>, &'static str> {
     if key.len() != 32 {
         return Err("AES-256 key must be 32 bytes");

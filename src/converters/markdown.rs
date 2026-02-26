@@ -20,29 +20,29 @@ use crate::layout::{
     TextSpan,
 };
 use crate::structure::spatial_table_detector::SpatialTableDetector;
-use crate::structure::table_extractor::{ExtractedTable, TableRow};
+
 use crate::XYCutStrategy;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 lazy_static! {
     /// Regex for matching URLs in text
-    static ref RE_URL: Regex = Regex::new(r"(https?://[^\s<>\[\]]*[^\s<>\[\].,!?;:])").unwrap();
+    static ref RE_URL: Regex = Regex::new(r"(https?://[^\s<>\[\]]*[^\s<>\[\].,!?;:])").expect("valid regex");
 
     /// Regex for matching email addresses
-    static ref RE_EMAIL: Regex = Regex::new(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})").unwrap();
+    static ref RE_EMAIL: Regex = Regex::new(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})").expect("valid regex");
 
     /// Regex for cleaning space before dash in numeric contexts
-    static ref RE_DASH_BEFORE: Regex = Regex::new(r"(\d)\s+(–|—)(\d)").unwrap();
+    static ref RE_DASH_BEFORE: Regex = Regex::new(r"(\d)\s+(–|—)(\d)").expect("valid regex");
 
     /// Regex for cleaning space after dash in numeric contexts
-    static ref RE_DASH_AFTER: Regex = Regex::new(r"(\d)(–|—)\s+(\d)").unwrap();
+    static ref RE_DASH_AFTER: Regex = Regex::new(r"(\d)(–|—)\s+(\d)").expect("valid regex");
 
     /// Regex for detecting missing spaces after punctuation
     /// Pattern: punctuation immediately followed by a letter (no space)
     /// Note: Rust regex crate doesn't support look-behind, using simple pattern
     /// False positives (URLs) are filtered by context in replacement
-    static ref RE_PUNCT_SPACE: Regex = Regex::new(r"([.!?;:,])([A-Za-z])").unwrap();
+    static ref RE_PUNCT_SPACE: Regex = Regex::new(r"([.!?;:,])([A-Za-z])").expect("valid regex");
 }
 
 /// Converter for PDF to Markdown format.
@@ -1174,87 +1174,6 @@ fn should_insert_bold_marker(prev_char: Option<char>, next_char: Option<char>) -
         // - Before whitespace, punctuation, or symbols
         _ => true,
     }
-}
-
-/// Render a markdown table from an extracted table structure.
-///
-/// Converts an ExtractedTable into Markdown table format with:
-/// - Header row (if present) separated by | delimiters
-/// - Separator row with |---|---|...
-/// - Data rows in same format
-///
-/// # Arguments
-///
-/// * `table` - The extracted table to render
-///
-/// # Returns
-///
-/// A string containing the Markdown table representation
-#[allow(dead_code)]
-fn render_markdown_table(table: &ExtractedTable) -> String {
-    let mut md = String::new();
-
-    if table.rows.is_empty() {
-        return md;
-    }
-
-    // Render header row if present
-    if table.has_header && !table.rows.is_empty() {
-        md.push_str(&render_table_row(&table.rows[0]));
-        md.push('\n');
-
-        // Separator row: |---|---|...
-        md.push('|');
-        for _ in 0..table.col_count {
-            md.push_str("---|");
-        }
-        md.push('\n');
-
-        // Data rows (starting from index 1 if we have a header)
-        for row in &table.rows[1..] {
-            md.push_str(&render_table_row(row));
-            md.push('\n');
-        }
-    } else {
-        // No header: render all rows
-        for (idx, row) in table.rows.iter().enumerate() {
-            md.push_str(&render_table_row(row));
-            md.push('\n');
-
-            // Add separator after first row if no header
-            if idx == 0 {
-                md.push('|');
-                for _ in 0..table.col_count {
-                    md.push_str("---|");
-                }
-                md.push('\n');
-            }
-        }
-    }
-
-    md
-}
-
-/// Render a single table row as a Markdown row.
-///
-/// Escapes pipe characters (|) in cell text and formats as: | cell1 | cell2 | ...
-///
-/// # Arguments
-///
-/// * `row` - The table row to render
-///
-/// # Returns
-///
-/// A string containing the Markdown row representation
-#[allow(dead_code)]
-fn render_table_row(row: &TableRow) -> String {
-    let mut line = String::from("|");
-    for cell in &row.cells {
-        // Escape pipe characters in cell text
-        let escaped = cell.text.replace('|', "\\|");
-        line.push_str(&format!(" {} |", escaped.trim()));
-    }
-    line
 }
 
 #[cfg(test)]

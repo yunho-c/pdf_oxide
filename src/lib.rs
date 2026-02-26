@@ -1,4 +1,6 @@
 // Allow some clippy lints that are too pedantic for this project
+#![deny(clippy::unwrap_used)]
+#![cfg_attr(test, allow(clippy::unwrap_used))]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::needless_range_loop)]
@@ -11,9 +13,15 @@
 #![allow(clippy::regex_creation_in_loops)]
 #![allow(clippy::manual_find)]
 #![allow(clippy::match_like_matches_macro)]
-// Allow unused for tests
+// Allow common test patterns
 #![cfg_attr(test, allow(dead_code))]
 #![cfg_attr(test, allow(unused_variables))]
+#![cfg_attr(test, allow(clippy::field_reassign_with_default))]
+#![cfg_attr(test, allow(clippy::approx_constant))]
+#![cfg_attr(test, allow(clippy::clone_on_copy))]
+#![cfg_attr(test, allow(clippy::len_zero))]
+#![cfg_attr(test, allow(clippy::manual_range_contains))]
+#![cfg_attr(test, allow(clippy::absurd_extreme_comparisons))]
 
 //! # PDF Oxide
 //!
@@ -298,8 +306,8 @@ pub(crate) mod utils {
             (true, false) => Ordering::Greater, // NaN > all numbers
             (false, true) => Ordering::Less,    // all numbers < NaN
             (false, false) => {
-                // Both are normal numbers, safe to unwrap
-                a.partial_cmp(&b).unwrap()
+                // Both are normal numbers, total_cmp handles all cases
+                a.total_cmp(&b)
             },
         }
     }

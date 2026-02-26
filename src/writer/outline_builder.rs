@@ -360,7 +360,7 @@ impl OutlineBuilder {
         root_dict.insert("First".to_string(), Object::Reference(ObjectRef::new(item_ids[0], 0)));
         root_dict.insert(
             "Last".to_string(),
-            Object::Reference(ObjectRef::new(*item_ids.last().unwrap(), 0)),
+            Object::Reference(ObjectRef::new(*item_ids.last().expect("items is non-empty"), 0)),
         );
         root_dict.insert("Count".to_string(), Object::Integer(total_count));
 
@@ -447,7 +447,7 @@ impl OutlineBuilder {
             dict.insert("First".to_string(), Object::Reference(ObjectRef::new(child_ids[0], 0)));
             dict.insert(
                 "Last".to_string(),
-                Object::Reference(ObjectRef::new(*child_ids.last().unwrap(), 0)),
+                Object::Reference(ObjectRef::new(*child_ids.last().expect("children is non-empty"), 0)),
             );
 
             // Add count

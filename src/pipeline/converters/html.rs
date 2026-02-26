@@ -202,7 +202,7 @@ impl HtmlOutputConverter {
         let base_font_size = if config.output.detect_headings {
             let sizes: Vec<f32> = sorted.iter().map(|s| s.span.font_size).collect();
             let mut sizes_sorted = sizes.clone();
-            sizes_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            sizes_sorted.sort_by(|a, b| a.total_cmp(b));
             sizes_sorted
                 .get(sizes_sorted.len() / 2)
                 .copied()

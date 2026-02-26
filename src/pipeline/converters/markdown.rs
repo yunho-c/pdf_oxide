@@ -13,10 +13,10 @@ use super::OutputConverter;
 
 lazy_static! {
     /// Regex for matching URLs in text
-    static ref RE_URL: Regex = Regex::new(r"(https?://[^\s<>\[\]]*[^\s<>\[\].,!?;:])").unwrap();
+    static ref RE_URL: Regex = Regex::new(r"(https?://[^\s<>\[\]]*[^\s<>\[\].,!?;:])").expect("valid regex");
 
     /// Regex for matching email addresses
-    static ref RE_EMAIL: Regex = Regex::new(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})").unwrap();
+    static ref RE_EMAIL: Regex = Regex::new(r"([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})").expect("valid regex");
 }
 
 /// Markdown output converter.
@@ -218,7 +218,7 @@ impl OutputConverter for MarkdownOutputConverter {
         let base_font_size = if config.output.detect_headings {
             let sizes: Vec<f32> = sorted.iter().map(|s| s.span.font_size).collect();
             let mut sizes_sorted = sizes.clone();
-            sizes_sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            sizes_sorted.sort_by(|a, b| a.total_cmp(b));
             // Use median as base size
             sizes_sorted
                 .get(sizes_sorted.len() / 2)

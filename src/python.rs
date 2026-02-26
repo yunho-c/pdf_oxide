@@ -505,7 +505,7 @@ impl PyPdfDocument {
             self.editor = Some(editor);
         }
 
-        let editor = self.editor.as_mut().unwrap();
+        let editor = self.editor.as_mut().expect("editor initialized above");
         let page = editor
             .get_page(index)
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to get page: {}", e)))?;
@@ -534,7 +534,7 @@ impl PyPdfDocument {
             return Err(PyRuntimeError::new_err("No editor initialized. Call page() first."));
         }
 
-        let editor = self.editor.as_mut().unwrap();
+        let editor = self.editor.as_mut().expect("editor initialized above");
         editor
             .save_page(page.inner.clone())
             .map_err(|e| PyRuntimeError::new_err(format!("Failed to save page: {}", e)))
@@ -3173,8 +3173,7 @@ impl PyRadialGradient {
 #[pyclass(name = "LineCap")]
 #[derive(Clone)]
 pub struct PyLineCap {
-    #[allow(dead_code)]
-    inner: RustLineCap,
+    _inner: RustLineCap,
 }
 
 #[pymethods]
@@ -3184,7 +3183,7 @@ impl PyLineCap {
     #[allow(non_snake_case)]
     fn BUTT() -> Self {
         PyLineCap {
-            inner: RustLineCap::Butt,
+            _inner: RustLineCap::Butt,
         }
     }
 
@@ -3193,7 +3192,7 @@ impl PyLineCap {
     #[allow(non_snake_case)]
     fn ROUND() -> Self {
         PyLineCap {
-            inner: RustLineCap::Round,
+            _inner: RustLineCap::Round,
         }
     }
 
@@ -3202,7 +3201,7 @@ impl PyLineCap {
     #[allow(non_snake_case)]
     fn SQUARE() -> Self {
         PyLineCap {
-            inner: RustLineCap::Square,
+            _inner: RustLineCap::Square,
         }
     }
 }
@@ -3211,8 +3210,7 @@ impl PyLineCap {
 #[pyclass(name = "LineJoin")]
 #[derive(Clone)]
 pub struct PyLineJoin {
-    #[allow(dead_code)]
-    inner: RustLineJoin,
+    _inner: RustLineJoin,
 }
 
 #[pymethods]
@@ -3222,7 +3220,7 @@ impl PyLineJoin {
     #[allow(non_snake_case)]
     fn MITER() -> Self {
         PyLineJoin {
-            inner: RustLineJoin::Miter,
+            _inner: RustLineJoin::Miter,
         }
     }
 
@@ -3231,7 +3229,7 @@ impl PyLineJoin {
     #[allow(non_snake_case)]
     fn ROUND() -> Self {
         PyLineJoin {
-            inner: RustLineJoin::Round,
+            _inner: RustLineJoin::Round,
         }
     }
 
@@ -3240,7 +3238,7 @@ impl PyLineJoin {
     #[allow(non_snake_case)]
     fn BEVEL() -> Self {
         PyLineJoin {
-            inner: RustLineJoin::Bevel,
+            _inner: RustLineJoin::Bevel,
         }
     }
 }

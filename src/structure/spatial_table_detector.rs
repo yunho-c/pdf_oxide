@@ -287,7 +287,7 @@ fn detect_columns(spans: &[TextSpan], column_tolerance: f32) -> Vec<ColumnCluste
     }
 
     // Sort columns left-to-right
-    columns.sort_by(|a, b| a.x_center.partial_cmp(&b.x_center).unwrap());
+    columns.sort_by(|a, b| a.x_center.total_cmp(&b.x_center));
 
     columns
 }
@@ -338,7 +338,7 @@ fn detect_rows(spans: &[TextSpan], row_tolerance: f32) -> Vec<RowCluster> {
     }
 
     // Sort rows top-to-bottom (higher Y first in PDF coordinates)
-    rows.sort_by(|a, b| b.y_center.partial_cmp(&a.y_center).unwrap());
+    rows.sort_by(|a, b| b.y_center.total_cmp(&a.y_center));
 
     rows
 }

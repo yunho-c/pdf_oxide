@@ -106,7 +106,7 @@ pub fn cluster_chars_into_words(chars: &[TextChar], epsilon: f32) -> Vec<Vec<usi
         }
 
         // Sort cluster by x-coordinate
-        cluster.sort_by(|&a, &b| chars[a].bbox.x.partial_cmp(&chars[b].bbox.x).unwrap());
+        cluster.sort_by(|&a, &b| chars[a].bbox.x.total_cmp(&chars[b].bbox.x));
         clusters.push(cluster);
     }
 
@@ -214,7 +214,7 @@ pub fn cluster_words_into_lines(words: &[TextBlock], epsilon_y: f32) -> Vec<Vec<
         }
 
         // Sort cluster by X position (left-to-right)
-        cluster.sort_by(|&a, &b| words[a].bbox.x.partial_cmp(&words[b].bbox.x).unwrap());
+        cluster.sort_by(|&a, &b| words[a].bbox.x.total_cmp(&words[b].bbox.x));
         clusters.push(cluster);
     }
 
@@ -330,7 +330,7 @@ pub fn cluster_chars_into_words(chars: &[TextChar], epsilon: f32) -> Vec<Vec<usi
         }
 
         // Sort cluster by X position (left-to-right)
-        cluster.sort_by(|&a, &b| chars[a].bbox.x.partial_cmp(&chars[b].bbox.x).unwrap());
+        cluster.sort_by(|&a, &b| chars[a].bbox.x.total_cmp(&chars[b].bbox.x));
 
         // Debug: Show the final cluster if it contains debug chars
         if is_debug_char && has_debug_chars {
@@ -407,7 +407,7 @@ pub fn cluster_words_into_lines(words: &[TextBlock], epsilon_y: f32) -> Vec<Vec<
         }
 
         // Sort by x-coordinate
-        cluster.sort_by(|&a, &b| words[a].bbox.x.partial_cmp(&words[b].bbox.x).unwrap());
+        cluster.sort_by(|&a, &b| words[a].bbox.x.total_cmp(&words[b].bbox.x));
 
         clusters.push(cluster);
     }

@@ -204,7 +204,7 @@ impl BatchMetrics {
             "total_extraction_time_ms": self.total_extraction_time_ms,
             "average_quality_score": self.average_quality_score(),
             "documents": self.documents.iter()
-                .map(|m| serde_json::from_str::<serde_json::Value>(&m.to_json()).unwrap())
+                .map(|m| serde_json::from_str::<serde_json::Value>(&m.to_json()).expect("valid JSON from to_json"))
                 .collect::<Vec<_>>(),
         })
         .to_string()

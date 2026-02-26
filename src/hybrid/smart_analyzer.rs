@@ -182,9 +182,8 @@ impl SmartLayoutAnalyzer {
             block_a
                 .bbox
                 .y
-                .partial_cmp(&block_b.bbox.y)
-                .unwrap()
-                .then(block_a.bbox.x.partial_cmp(&block_b.bbox.x).unwrap())
+                .total_cmp(&block_b.bbox.y)
+                .then(block_a.bbox.x.total_cmp(&block_b.bbox.x))
         });
 
         order

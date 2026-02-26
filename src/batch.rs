@@ -135,16 +135,14 @@ impl BatchProcessor {
         let mut pdf_paths: Vec<PathBuf> = Vec::new();
 
         let entries = std::fs::read_dir(dir)
-            .map_err(|e| Error::Io(e))?;
+            .map_err(Error::Io)?;
 
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                if path.is_file() {
-                    if let Some(ext) = path.extension() {
-                        if ext.eq_ignore_ascii_case("pdf") {
-                            pdf_paths.push(path);
-                        }
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension() {
+                    if ext.eq_ignore_ascii_case("pdf") {
+                        pdf_paths.push(path);
                     }
                 }
             }

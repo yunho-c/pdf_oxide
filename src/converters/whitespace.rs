@@ -8,25 +8,25 @@ use regex::Regex;
 
 lazy_static! {
     /// Regex for normalizing 3+ consecutive newlines
-    static ref RE_MULTI_NEWLINE: Regex = Regex::new(r"\n{3,}").unwrap();
+    static ref RE_MULTI_NEWLINE: Regex = Regex::new(r"\n{3,}").expect("valid regex");
 
     /// Regex for "Page N" style page numbers
-    static ref RE_PAGE_NUM: Regex = Regex::new(r"(?m)^Page\s+\d+\s*$").unwrap();
+    static ref RE_PAGE_NUM: Regex = Regex::new(r"(?m)^Page\s+\d+\s*$").expect("valid regex");
 
     /// Regex for "- N -" style page numbers
-    static ref RE_DASH_PAGE: Regex = Regex::new(r"(?m)^\s*-\s*\d+\s*-\s*$").unwrap();
+    static ref RE_DASH_PAGE: Regex = Regex::new(r"(?m)^\s*-\s*\d+\s*-\s*$").expect("valid regex");
 
     /// Regex for "[N]" or "(N)" style page numbers
-    static ref RE_BRACKET_PAGE: Regex = Regex::new(r"(?m)^\s*[\[\(]\d+[\]\)]\s*$").unwrap();
+    static ref RE_BRACKET_PAGE: Regex = Regex::new(r"(?m)^\s*[\[\(]\d+[\]\)]\s*$").expect("valid regex");
 
     /// Regex for standalone numbers (likely page numbers)
-    static ref RE_STANDALONE_NUM: Regex = Regex::new(r"(?m)^\s*\d{1,3}\s*$").unwrap();
+    static ref RE_STANDALONE_NUM: Regex = Regex::new(r"(?m)^\s*\d{1,3}\s*$").expect("valid regex");
 
     /// Regex for dash separators
-    static ref RE_DASH_SEP: Regex = Regex::new(r"(?m)^[\s\-]{5,}$").unwrap();
+    static ref RE_DASH_SEP: Regex = Regex::new(r"(?m)^[\s\-]{5,}$").expect("valid regex");
 
     /// Regex for equals sign separators
-    static ref RE_EQUALS_SEP: Regex = Regex::new(r"(?m)^[\s=]{5,}$").unwrap();
+    static ref RE_EQUALS_SEP: Regex = Regex::new(r"(?m)^[\s=]{5,}$").expect("valid regex");
 }
 
 /// Normalize whitespace in markdown text by limiting consecutive blank lines.
@@ -146,7 +146,7 @@ pub fn merge_bold_markers(text: &str) -> String {
         // We want to extend bold to include the following words if they form a natural phrase
         static ref RE_BOLD_GAP: Regex = Regex::new(
             r"\*\*([^*]+)\*\*\s+([a-zA-Z]+)(?:\s+([a-zA-Z]+))?(?:\s+([a-zA-Z]+))?"
-        ).unwrap();
+        ).expect("valid regex");
     }
 
     // For now, implement a simpler approach: merge `** **` patterns (empty bold boundaries)
@@ -180,7 +180,7 @@ pub fn merge_bold_markers(text: &str) -> String {
 pub fn remove_duplicate_words(text: &str) -> String {
     lazy_static! {
         // Pattern: word (4+ letters)
-        static ref RE_WORD: Regex = Regex::new(r"\b(\w{4,})\b").unwrap();
+        static ref RE_WORD: Regex = Regex::new(r"\b(\w{4,})\b").expect("valid regex");
     }
 
     let mut result = String::with_capacity(text.len());
@@ -188,7 +188,7 @@ pub fn remove_duplicate_words(text: &str) -> String {
     let mut last_end = 0;
 
     for cap in RE_WORD.captures_iter(text) {
-        let m = cap.get(0).unwrap();
+        let m = cap.get(0).expect("capture group 0 always exists");
         let word = m.as_str();
         let start = m.start();
         let end = m.end();
@@ -284,7 +284,7 @@ pub fn cleanup_markdown(text: &str) -> String {
 pub fn normalize_horizontal_whitespace(text: &str) -> String {
     lazy_static! {
         // Pattern: 2 or more spaces
-        static ref RE_MULTI_SPACE: Regex = Regex::new(r" {2,}").unwrap();
+        static ref RE_MULTI_SPACE: Regex = Regex::new(r" {2,}").expect("valid regex");
     }
 
     // Process line by line to preserve indentation at start of lines

@@ -250,7 +250,7 @@ impl LayerBuilder {
     pub fn add_layer(&mut self, name: impl Into<String>) -> &mut Layer {
         let layer = Layer::new(name);
         self.layers.push(layer);
-        self.layers.last_mut().unwrap()
+        self.layers.last_mut().expect("just pushed layer")
     }
 
     /// Set the base visibility state for layers.

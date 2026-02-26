@@ -2832,20 +2832,6 @@ pub(crate) fn glyph_name_to_unicode_string(glyph_name: &str) -> Option<String> {
     None
 }
 
-// Removed old implementation - replaced with compact AGL lookup above
-// Old code: ~350 lines of match arms with ~200 hardcoded glyphs
-// New code: 4281 glyphs from official Adobe Glyph List via perfect hash map
-#[allow(dead_code)]
-fn _old_glyph_name_to_unicode_removed() {
-    // This function body intentionally left empty.
-    // The old match-based implementation has been replaced with
-    // a lookup in the complete Adobe Glyph List static map.
-    // See super::adobe_glyph_list::ADOBE_GLYPH_LIST for the new implementation.
-}
-
-// Old implementation removed - was 350+ lines of hardcoded match arms
-// Now using complete Adobe Glyph List with 4281 entries from adobe_glyph_list module
-
 /// Check if a character is a ligature.
 ///
 /// This function identifies Unicode ligature characters (U+FB00 to U+FB06)

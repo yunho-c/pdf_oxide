@@ -256,7 +256,7 @@ impl<'a> TrueTypeFont<'a> {
     /// For Identity-H encoding, CID = GID.
     pub fn generate_widths_array(&self, used_glyphs: &BTreeSet<u16>) -> Vec<u8> {
         let mut result = Vec::new();
-        write!(result, "[").unwrap();
+        write!(result, "[").expect("write to String");
 
         // Group consecutive glyphs
         let mut glyphs: Vec<_> = used_glyphs.iter().copied().collect();
@@ -275,19 +275,19 @@ impl<'a> TrueTypeFont<'a> {
                 widths.push(self.glyph_width(end));
             }
 
-            write!(result, "{} [", start).unwrap();
+            write!(result, "{} [", start).expect("write to String");
             for (j, w) in widths.iter().enumerate() {
                 if j > 0 {
-                    write!(result, " ").unwrap();
+                    write!(result, " ").expect("write to String");
                 }
-                write!(result, "{}", w).unwrap();
+                write!(result, "{}", w).expect("write to String");
             }
-            write!(result, "]").unwrap();
+            write!(result, "]").expect("write to String");
 
             i += 1;
         }
 
-        write!(result, "]").unwrap();
+        write!(result, "]").expect("write to String");
         result
     }
 

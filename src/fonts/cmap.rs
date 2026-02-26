@@ -261,7 +261,7 @@ impl LazyCMap {
     /// Returns the parsed CMap, loading and caching it on first access.
     pub fn get(&self) -> Option<Arc<CMap>> {
         // Step 1: Check local cache
-        let mut parsed_guard = self.parsed.lock().unwrap();
+        let mut parsed_guard = self.parsed.lock().expect("mutex not poisoned");
 
         if let Some(cached) = parsed_guard.as_ref() {
             // Already parsed locally, return immediately
@@ -270,7 +270,7 @@ impl LazyCMap {
 
         // Step 2: Check global cache
         {
-            let global = CMAP_CACHE.lock().unwrap();
+            let global = CMAP_CACHE.lock().expect("mutex not poisoned");
             if let Some(cached) = global.get(&self.cache_key) {
                 let arc = Arc::clone(cached);
                 // Update local cache for next access
@@ -290,7 +290,7 @@ impl LazyCMap {
 
                 // Update global cache
                 {
-                    let mut global = CMAP_CACHE.lock().unwrap();
+                    let mut global = CMAP_CACHE.lock().expect("mutex not poisoned");
                     global.insert(self.cache_key.clone(), Arc::clone(&cmap_arc));
                 }
 
@@ -500,7 +500,7 @@ fn extract_sections<'a>(content: &'a str, begin: &str, end: &str) -> Vec<&'a str
 /// and flexible whitespace inside angle brackets.
 fn parse_bfchar_line(line: &str) -> Vec<(u32, String)> {
     lazy_static::lazy_static! {
-        static ref RE: Regex = Regex::new(r"<([^>]*)>\s*<([^>]*)>").unwrap();
+        static ref RE: Regex = Regex::new(r"<([^>]*)>\s*<([^>]*)>").expect("valid regex");
     }
 
     let mut results = Vec::new();
@@ -592,11 +592,11 @@ fn parse_bfrange_line(line: &str) -> Option<Vec<(u32, String)>> {
         // Format 1: <start> <end> <dst> - Flexible whitespace inside brackets
         static ref RE_SEQ: Regex = Regex::new(
             r"<([^>]*)>\s*<([^>]*)>\s*<([^>]*)>"
-        ).unwrap();
+        ).expect("valid regex");
         // Format 2: <start> <end> [<dst1> <dst2> ...] - Flexible whitespace inside brackets
         static ref RE_ARRAY: Regex = Regex::new(
             r"<([^>]*)>\s*<([^>]*)>\s*\[((?:\s*<[^>]+>\s*)+)\]"
-        ).unwrap();
+        ).expect("valid regex");
     }
 
     // Try format 2 first (array format)
@@ -612,14 +612,14 @@ fn parse_bfrange_line(line: &str) -> Option<Vec<(u32, String)>> {
         // Extract all destination hex strings from array
         // Each can be a single Unicode code point OR multiple code points (for ligatures)
         lazy_static::lazy_static! {
-            static ref RE_HEX: Regex = Regex::new(r"<([^>]*)>").unwrap();
+            static ref RE_HEX: Regex = Regex::new(r"<([^>]*)>").expect("valid regex");
         }
         let dst_hexes: Vec<String> = RE_HEX
             .captures_iter(array_str)
             .filter_map(|cap| {
                 let s = cap
                     .get(1)
-                    .unwrap()
+                    .expect("capture group 1 exists")
                     .as_str()
                     .trim()
                     .replace(char::is_whitespace, "");
@@ -766,7 +766,7 @@ fn parse_notdefrange_line(line: &str) -> Option<Vec<(u32, String)>> {
         // Format: <start> <end> <dst> - Flexible whitespace inside brackets
         static ref RE_SEQ: Regex = Regex::new(
             r"<([^>]*)>\s*<([^>]*)>\s*<([^>]*)>"
-        ).unwrap();
+        ).expect("valid regex");
     }
 
     if let Some(caps) = RE_SEQ.captures(line) {

@@ -254,7 +254,7 @@ pub fn ocr_page(
     let largest_image = images
         .iter()
         .max_by_key(|img| (img.width() as u64) * (img.height() as u64))
-        .unwrap();
+        .expect("images is non-empty");
 
     // Convert to DynamicImage
     let dynamic_image = largest_image.to_dynamic_image()?;
@@ -300,7 +300,7 @@ pub fn ocr_page_spans(
     let largest_image = images
         .iter()
         .max_by_key(|img| (img.width() as u64) * (img.height() as u64))
-        .unwrap();
+        .expect("images is non-empty");
 
     // Convert to DynamicImage
     let dynamic_image = largest_image.to_dynamic_image()?;

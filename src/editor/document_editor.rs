@@ -1913,7 +1913,7 @@ impl DocumentEditor {
                                                             let mods = self
                                                                 .image_modifications
                                                                 .get(&page_index)
-                                                                .unwrap();
+                                                                .expect("page has image modifications");
                                                             match self.rewrite_content_stream_with_image_mods(&content_data, mods) {
                                                                 Ok(modified_content) => {
                                                                     let modified_stream = Object::Stream {
@@ -1968,7 +1968,7 @@ impl DocumentEditor {
                                                         let mods = self
                                                             .image_modifications
                                                             .get(&page_index)
-                                                            .unwrap();
+                                                            .expect("page has image modifications");
                                                         for item in arr {
                                                             if let Object::Reference(ref_obj) = item
                                                             {
@@ -2456,7 +2456,7 @@ impl DocumentEditor {
 
         // Write info dictionary if modified
         let info_ref = if self.modified_info.is_some() {
-            let info = self.modified_info.clone().unwrap();
+            let info = self.modified_info.clone().expect("checked is_some above");
             let info_id = self.allocate_object_id();
             let info_obj = info.to_object();
             let offset = writer.stream_position()?;

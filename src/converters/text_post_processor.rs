@@ -21,11 +21,11 @@ use regex::Regex;
 lazy_static! {
     /// Regex for detecting line-end hyphens with potential line breaks
     /// Matches: soft hyphen or hard hyphen at line end, followed by optional whitespace and lowercase letter
-    static ref RE_HYPHEN_LINEBREAK: Regex = Regex::new(r"(\-|\u{00AD})\n\s*([a-z])").unwrap();
+    static ref RE_HYPHEN_LINEBREAK: Regex = Regex::new(r"(\-|\u{00AD})\n\s*([a-z])").expect("valid regex");
 
     /// Regex for excessive spaces within words
     /// Matches: non-space followed by 2+ spaces followed by non-space
-    static ref RE_EXCESSIVE_SPACES: Regex = Regex::new(r"([^\s])\s{2,}([^\s])").unwrap();
+    static ref RE_EXCESSIVE_SPACES: Regex = Regex::new(r"([^\s])\s{2,}([^\s])").expect("valid regex");
 }
 
 /// Text post-processor for improving extraction quality per PDF specification.

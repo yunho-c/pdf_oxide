@@ -185,10 +185,9 @@ pub struct DocumentMetadata {
 /// Structured text extractor.
 ///
 /// Converts positioned characters into semantic document elements.
-#[allow(dead_code)]
 pub struct StructuredExtractor {
-    /// Configuration options
-    config: ExtractorConfig,
+    /// Configuration options (retained for API compatibility)
+    _config: ExtractorConfig,
 }
 
 /// Extraction configuration.
@@ -198,53 +197,20 @@ pub struct StructuredExtractor {
 /// Header detection, list detection, and alignment detection have been removed
 /// for PDF-specification compliance. These options are retained for API compatibility
 /// but no longer have any effect.
-#[derive(Debug, Clone)]
-pub struct ExtractorConfig {
-    /// (Deprecated) Minimum font size to consider as header
-    /// This option no longer has any effect.
-    #[allow(dead_code)]
-    pub min_header_size: f32,
-    /// (Deprecated) Maximum header levels to detect
-    /// This option no longer has any effect.
-    #[allow(dead_code)]
-    pub max_header_levels: u8,
-    /// (Deprecated) Vertical gap threshold for paragraph breaks
-    /// This option no longer has any effect.
-    #[allow(dead_code)]
-    pub paragraph_gap_threshold: f32,
-    /// (Deprecated) Enable list detection
-    /// This option no longer has any effect.
-    #[allow(dead_code)]
-    pub detect_lists: bool,
-    /// (Deprecated) Enable table detection
-    /// This option no longer has any effect.
-    #[allow(dead_code)]
-    pub detect_tables: bool,
-}
-
-impl Default for ExtractorConfig {
-    fn default() -> Self {
-        Self {
-            min_header_size: 14.0,
-            max_header_levels: 6,
-            paragraph_gap_threshold: 1.5,
-            detect_lists: false,
-            detect_tables: false,
-        }
-    }
-}
+#[derive(Debug, Clone, Default)]
+pub struct ExtractorConfig {}
 
 impl StructuredExtractor {
     /// Create a new structured extractor with default configuration.
     pub fn new() -> Self {
         Self {
-            config: ExtractorConfig::default(),
+            _config: ExtractorConfig::default(),
         }
     }
 
     /// Create a new structured extractor with custom configuration.
-    pub fn with_config(config: ExtractorConfig) -> Self {
-        Self { config }
+    pub fn with_config(_config: ExtractorConfig) -> Self {
+        Self { _config }
     }
 
     /// Extract structured content from a page.

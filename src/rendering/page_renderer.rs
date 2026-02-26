@@ -303,7 +303,7 @@ impl PageRenderer {
                 } => {
                     current_path.push_rect(
                         tiny_skia::Rect::from_xywh(*x, *y, *width, *height)
-                            .unwrap_or(tiny_skia::Rect::from_xywh(0.0, 0.0, 1.0, 1.0).unwrap()),
+                            .unwrap_or(tiny_skia::Rect::from_xywh(0.0, 0.0, 1.0, 1.0).expect("valid fallback rect")),
                     );
                 },
                 Operator::ClosePath => {
@@ -631,7 +631,7 @@ impl PageRenderer {
 
         // Create tiny-skia pixmap from RGBA data
         if let Some(img_pixmap) =
-            Pixmap::from_vec(rgba_data, tiny_skia::IntSize::from_wh(width, height).unwrap())
+            Pixmap::from_vec(rgba_data, tiny_skia::IntSize::from_wh(width, height).expect("valid image dimensions"))
         {
             // Draw image with transform and clip mask
             let paint = PixmapPaint::default();
@@ -871,7 +871,7 @@ fn apply_pending_clip(
     if let Some((clip_path, fill_rule)) = pending_clip.take() {
         let gs = gs_stack.current();
         let transform = combine_transforms(base_transform, &gs.ctm);
-        let mut new_mask = tiny_skia::Mask::new(pixmap.width(), pixmap.height()).unwrap();
+        let mut new_mask = tiny_skia::Mask::new(pixmap.width(), pixmap.height()).expect("valid pixmap dimensions");
         new_mask.fill_path(&clip_path, fill_rule, false, transform);
 
         // Intersect with existing clip: AND the masks together

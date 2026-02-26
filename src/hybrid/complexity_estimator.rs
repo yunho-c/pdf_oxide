@@ -156,7 +156,7 @@ impl ComplexityEstimator {
 
         // Collect and sort X positions
         let mut x_positions: Vec<f32> = blocks.iter().map(|b| b.bbox.x).collect();
-        x_positions.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        x_positions.sort_by(|a, b| a.total_cmp(b));
 
         // Count gaps larger than 20% of page width as column separators
         let mut columns = 1;

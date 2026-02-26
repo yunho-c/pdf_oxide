@@ -125,7 +125,6 @@ fn generate_random_encryption_key(key_length: usize) -> Vec<u8> {
 /// Pad or truncate a password to 32 bytes using the standard padding.
 ///
 /// PDF Spec: Algorithm 2, step 1
-#[allow(dead_code)]
 pub fn pad_password(password: &[u8]) -> Vec<u8> {
     let mut padded = Vec::with_capacity(32);
     let pass_len = password.len().min(32);

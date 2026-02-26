@@ -16,10 +16,10 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 
 lazy_static! {
     /// Regex for finding "N G obj" patterns in PDF files
-    static ref RE_OBJ_PATTERN: regex::bytes::Regex = regex::bytes::Regex::new(r"(\d+)\s+(\d+)\s+obj").unwrap();
+    static ref RE_OBJ_PATTERN: regex::bytes::Regex = regex::bytes::Regex::new(r"(\d+)\s+(\d+)\s+obj").expect("valid regex");
 
     /// Regex for finding "trailer <<" patterns
-    static ref RE_TRAILER: regex::bytes::Regex = regex::bytes::Regex::new(r"trailer\s*<<").unwrap();
+    static ref RE_TRAILER: regex::bytes::Regex = regex::bytes::Regex::new(r"trailer\s*<<").expect("valid regex");
 }
 
 /// Reconstruct the cross-reference table by scanning the entire PDF file.
@@ -443,7 +443,7 @@ mod tests {
         let result = reconstruct_xref(&mut cursor);
 
         assert!(result.is_ok());
-        let (xref, trailer) = result.unwrap();
+        let (xref, trailer) = result.expect("valid regex");
 
         // Should find objects 1 and 2
         assert!(xref.contains(1));

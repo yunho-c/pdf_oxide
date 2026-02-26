@@ -825,7 +825,7 @@ impl Default for TextLayout {
 // Embedded Font Support (v0.3.0)
 // =============================================================================
 
-use crate::fonts::{FontSubsetter, TrueTypeFont, UnicodeEncoder};
+use crate::fonts::{FontSubsetter, TrueTypeFont};
 
 /// Embedded TrueType font for PDF generation.
 ///
@@ -841,9 +841,6 @@ pub struct EmbeddedFont {
     font_data: Arc<Vec<u8>>,
     /// Subsetter tracking used glyphs
     subsetter: FontSubsetter,
-    /// Unicode encoder for text
-    #[allow(dead_code)]
-    encoder: UnicodeEncoder,
     /// Cached glyph lookup (Unicode -> GID)
     glyph_lookup: HashMap<u32, u16>,
     /// Cached glyph widths (GID -> width in 1/1000 em)
@@ -864,9 +861,6 @@ pub struct EmbeddedFont {
     pub stem_v: i16,
     /// Italic angle in degrees
     pub italic_angle: f32,
-    /// Units per em
-    #[allow(dead_code)]
-    units_per_em: u16,
 }
 
 impl EmbeddedFont {
@@ -903,7 +897,6 @@ impl EmbeddedFont {
             subset_name: None,
             font_data: Arc::new(data),
             subsetter: FontSubsetter::new(),
-            encoder: UnicodeEncoder::new(),
             glyph_lookup,
             glyph_widths,
             ascender: metrics.pdf_ascender(),
@@ -914,7 +907,6 @@ impl EmbeddedFont {
             flags: metrics.flags,
             stem_v: metrics.stem_v,
             italic_angle: metrics.italic_angle,
-            units_per_em: metrics.units_per_em,
         })
     }
 
@@ -979,7 +971,7 @@ impl EmbeddedFont {
         if self.subset_name.is_none() {
             self.subset_name = Some(self.subsetter.subset_font_name(&self.name));
         }
-        self.subset_name.as_ref().unwrap()
+        self.subset_name.as_ref().expect("subset_name set above")
     }
 
     /// Get the raw font data for embedding.

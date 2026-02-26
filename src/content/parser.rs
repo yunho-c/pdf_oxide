@@ -263,16 +263,10 @@ fn prescan_text_regions(data: &[u8]) -> Option<Vec<(usize, usize)>> {
                 let pos = offset + rel_pos;
                 offset = pos + 1;
 
-                // Check for "BT" at boundary
-                if data[pos] == b'B' && pos + 1 < len && data[pos + 1] == b'T' {
-                    let before_ok = pos == 0 || is_boundary(data[pos - 1]);
-                    let after_ok = pos + 2 >= len || is_boundary(data[pos + 2]);
-                    if before_ok && after_ok {
-                        text_positions.push(pos);
-                    }
-                }
-                // Check for "Do" at boundary
-                else if data[pos] == b'D' && pos + 1 < len && data[pos + 1] == b'o' {
+                // Check for "BT" or "Do" at boundary
+                let is_bt = data[pos] == b'B' && pos + 1 < len && data[pos + 1] == b'T';
+                let is_do = data[pos] == b'D' && pos + 1 < len && data[pos + 1] == b'o';
+                if is_bt || is_do {
                     let before_ok = pos == 0 || is_boundary(data[pos - 1]);
                     let after_ok = pos + 2 >= len || is_boundary(data[pos + 2]);
                     if before_ok && after_ok {
@@ -4466,7 +4460,7 @@ mod tests {
         let result = parse_literal_string_fast(data, 0);
         assert!(result.is_some());
         let (bytes, _) = result.unwrap();
-        assert_eq!(bytes, &[b'A']);
+        assert_eq!(bytes, b"A");
     }
 
     #[test]

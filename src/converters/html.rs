@@ -13,10 +13,10 @@ use regex::Regex;
 
 lazy_static! {
     /// Regex for matching URLs in text
-    static ref RE_URL: Regex = Regex::new(r"https?://[^\s<>()]+").unwrap();
+    static ref RE_URL: Regex = Regex::new(r"https?://[^\s<>()]+").expect("valid regex");
 
     /// Regex for matching email addresses
-    static ref RE_EMAIL: Regex = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
+    static ref RE_EMAIL: Regex = Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").expect("valid regex");
 }
 
 /// Converter for PDF to HTML format.
@@ -199,7 +199,9 @@ impl HtmlConverter {
                         }
                     } else {
                         // Different line or font - start new paragraph
-                        blocks.push(current_paragraph.take().unwrap());
+                        if let Some(para) = current_paragraph.take() {
+                        blocks.push(para);
+                    }
                         current_paragraph = Some(span_block);
                     }
                 },
