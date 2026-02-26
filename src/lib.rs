@@ -213,6 +213,9 @@ pub mod signatures;
 #[cfg_attr(docsrs, doc(cfg(feature = "parallel")))]
 pub mod parallel;
 
+// Batch processing API (v0.3.10)
+pub mod batch;
+
 // PDF/A compliance validation (v0.3.0)
 pub mod compliance;
 
