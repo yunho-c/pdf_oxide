@@ -1308,7 +1308,7 @@ mod tests {
 
     #[test]
     fn test_parse_field_value_real_returns_none() {
-        let obj = Object::Real(3.14);
+        let obj = Object::Real(std::f64::consts::PI);
         let value = FormExtractor::parse_field_value(&obj, &FieldType::Text);
         assert!(matches!(value, FieldValue::None));
     }

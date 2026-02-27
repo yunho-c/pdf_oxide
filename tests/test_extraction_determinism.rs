@@ -1,18 +1,9 @@
-//! Correctness tests for v0.3.10 performance optimizations.
-//!
-//! Verifies that P1 (memchr prescan), P2 (XObject caching), P3 (page skip),
-//! global font cache, and extraction determinism are correct.
-
 use pdf_oxide::document::PdfDocument;
 use pdf_oxide::{clear_global_font_cache, global_font_cache_stats, set_global_font_cache_capacity};
 use std::io::Write;
 
-// ===========================================================================
-// Helpers
-// ===========================================================================
-
 fn write_temp_pdf(data: &[u8], name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join("pdf_oxide_tests_v0310_perf");
+    let dir = std::env::temp_dir().join("pdf_oxide_determinism_tests");
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join(name);
     let mut f = std::fs::File::create(&path).unwrap();
@@ -20,16 +11,8 @@ fn write_temp_pdf(data: &[u8], name: &str) -> std::path::PathBuf {
     path
 }
 
-// ===========================================================================
-// P1 — memchr Pre-scan (integration tests)
-// ===========================================================================
-
-/// Text extraction is identical regardless of stream size.
-/// (Validates that the prescan optimization produces same results as full scan.)
 #[test]
 fn test_extraction_identical_regardless_of_stream_size() {
-    // Extract text from the same fixture twice — results must be identical.
-    // The prescan path is chosen based on stream size, but correctness must not vary.
     let mut doc1 = PdfDocument::open("tests/fixtures/simple.pdf").unwrap();
     let mut doc2 = PdfDocument::open("tests/fixtures/simple.pdf").unwrap();
 
@@ -41,10 +24,8 @@ fn test_extraction_identical_regardless_of_stream_size() {
     }
 }
 
-/// Build a PDF with a large non-text content stream (pure graphics) → empty text output.
 #[test]
 fn test_large_stream_with_no_text_extracts_empty() {
-    // Build a PDF with a large stream of path operators (no BT/ET)
     let mut pdf = Vec::new();
     pdf.extend_from_slice(b"%PDF-1.4\n");
 
@@ -56,7 +37,6 @@ fn test_large_stream_with_no_text_extracts_empty() {
         b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n\n",
     );
 
-    // Build a ~10KB stream of pure path operators (no text)
     let mut content_stream = Vec::new();
     for i in 0..500 {
         let line = format!("{} {} m {} {} l S\n", i, i * 2, i + 10, i * 2 + 10);
@@ -102,11 +82,6 @@ fn test_large_stream_with_no_text_extracts_empty() {
     );
 }
 
-// ===========================================================================
-// P2 — XObject Caching (determinism)
-// ===========================================================================
-
-/// Extracting text from the same page twice → identical output (cache hit path).
 #[test]
 fn test_repeated_extraction_deterministic() {
     let mut doc = PdfDocument::open("tests/fixtures/outline.pdf").unwrap();
@@ -115,7 +90,6 @@ fn test_repeated_extraction_deterministic() {
     assert_eq!(t1, t2, "Repeated extraction of page 0 should be identical");
 }
 
-/// All pages extracted twice → all identical (verifies cache works across pages).
 #[test]
 fn test_all_pages_twice_deterministic() {
     let mut doc = PdfDocument::open("tests/fixtures/outline.pdf").unwrap();
@@ -136,15 +110,8 @@ fn test_all_pages_twice_deterministic() {
     }
 }
 
-// ===========================================================================
-// P3 — Image-Only Page Skip (safety check)
-// ===========================================================================
-
-/// A page with text content is NOT incorrectly skipped by image-only optimization.
-/// We use a synthetic PDF with actual text to verify this.
 #[test]
 fn test_text_page_not_skipped() {
-    // Build a PDF with a text content stream to verify it's not skipped
     let mut pdf = Vec::new();
     pdf.extend_from_slice(b"%PDF-1.4\n");
 
@@ -203,11 +170,6 @@ fn test_text_page_not_skipped() {
     );
 }
 
-// ===========================================================================
-// Global Font Cache
-// ===========================================================================
-
-/// After extraction, the global font cache should be populated.
 #[test]
 fn test_global_cache_populated_after_extraction() {
     clear_global_font_cache();
@@ -216,16 +178,11 @@ fn test_global_cache_populated_after_extraction() {
     let _text = doc.extract_text(0).unwrap();
 
     let (size, _capacity) = global_font_cache_stats();
-    // simple.pdf has at least one font; cache should have entries
-    // (may be 0 if simple.pdf uses only built-in fonts that aren't cached)
-    // We just check it doesn't panic and returns valid stats
     assert!(size <= _capacity, "Cache size should not exceed capacity");
 }
 
-/// Clear cache → size drops to 0.
 #[test]
 fn test_global_cache_clear_works() {
-    // First populate
     let mut doc = PdfDocument::open("tests/fixtures/simple.pdf").unwrap();
     let _text = doc.extract_text(0).unwrap();
     drop(doc);
@@ -235,13 +192,11 @@ fn test_global_cache_clear_works() {
     assert_eq!(size, 0, "After clear, cache size should be 0");
 }
 
-/// Setting capacity to 1 limits cache size.
 #[test]
 fn test_global_cache_capacity_limit() {
     clear_global_font_cache();
     set_global_font_cache_capacity(1);
 
-    // Extract from a PDF to populate cache
     let mut doc = PdfDocument::open("tests/fixtures/outline.pdf").unwrap();
     let pages = doc.page_count().unwrap();
     for p in 0..pages {
@@ -253,16 +208,10 @@ fn test_global_cache_capacity_limit() {
     assert!(size <= 1, "Cache size should be at most 1, got {}", size);
     assert_eq!(capacity, 1, "Capacity should be 1");
 
-    // Restore default capacity to not affect other tests
     set_global_font_cache_capacity(1024);
     clear_global_font_cache();
 }
 
-// ===========================================================================
-// Determinism
-// ===========================================================================
-
-/// Three independent document opens → byte-identical text extraction.
 #[test]
 fn test_three_independent_runs_identical() {
     clear_global_font_cache();
@@ -280,19 +229,13 @@ fn test_three_independent_runs_identical() {
     }
 
     for run in 1..3 {
-        assert_eq!(
-            results[0].len(),
-            results[run].len(),
-            "Run {} page count differs",
-            run
-        );
+        assert_eq!(results[0].len(), results[run].len(), "Run {} page count differs", run);
         for (p, (a, b)) in results[0].iter().zip(results[run].iter()).enumerate() {
             assert_eq!(a, b, "Run 0 vs run {}: page {} text differs", run, p);
         }
     }
 }
 
-/// open() vs open_from_bytes() → identical text extraction.
 #[test]
 fn test_file_vs_bytes_extraction_identical() {
     let path = "tests/fixtures/simple.pdf";

@@ -681,7 +681,9 @@ pub fn extract_image_from_xobject(
 
     log::debug!("Image filters detected: {:?}", filter_names);
 
-    let is_jpeg = filter_names.iter().any(|name| name == "DCTDecode");
+    let has_dct = filter_names.iter().any(|name| name == "DCTDecode");
+    let is_jpeg_only = has_dct && filter_names.len() == 1;
+    let is_jpeg_chain = has_dct && filter_names.len() > 1;
 
     // Check for CCITT parameter mismatch (incorrectly labeled as JBIG2Decode)
     let mut ccitt_params_override: Option<crate::decoders::CcittParams> = None;
@@ -714,12 +716,22 @@ pub fn extract_image_from_xobject(
     }
 
     // Extract image data
-    let data = if is_jpeg {
-        // JPEG pass-through - extract raw stream data without decoding
+    let data = if is_jpeg_only {
+        // DCTDecode is the sole filter - raw pass-through (stream data is already JPEG)
         match xobject {
             Object::Stream { data, .. } => ImageData::Jpeg(data.to_vec()),
             _ => return Err(Error::Image("XObject is not a stream".to_string())),
         }
+    } else if is_jpeg_chain {
+        // DCTDecode with other filters (e.g., [FlateDecode, DCTDecode]).
+        // The raw stream data still has preceding filters applied (e.g., deflate-compressed).
+        // Decode the full chain — DctDecoder is a pass-through, so the result is valid JPEG.
+        let decoded = if let (Some(doc), Some(ref_id)) = (doc, obj_ref) {
+            doc.decode_stream_with_encryption(xobject, ref_id)?
+        } else {
+            xobject.decode_stream_data()?
+        };
+        ImageData::Jpeg(decoded)
     } else if ccitt_params_override.is_some() {
         // Special handling: If we detected CCITT parameters override, extract the raw stream
         // without applying the (incorrect) JBIG2Decode filter

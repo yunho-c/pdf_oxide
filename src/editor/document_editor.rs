@@ -7127,7 +7127,7 @@ mod tests {
     fn test_serialize_object_real() {
         let editor = create_test_editor();
         let mut output = Vec::new();
-        editor.serialize_object(&mut output, &Object::Real(3.14));
+        editor.serialize_object(&mut output, &Object::Real(std::f64::consts::PI));
         let s = String::from_utf8(output).unwrap();
         assert!(s.starts_with("3.14"));
     }

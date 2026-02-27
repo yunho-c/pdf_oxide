@@ -1,7 +1,3 @@
-//! Integration tests for image extraction.
-//!
-//! Phase 5, Task 5.4
-
 use pdf_oxide::extractors::images::{
     extract_image_from_xobject, parse_color_space, ColorSpace, ImageData, PdfImage, PixelFormat,
 };
@@ -509,4 +505,140 @@ fn test_large_image_dimensions() {
     let image = extract_image_from_xobject(None, &xobject, None).unwrap();
     assert_eq!(image.width(), 4096);
     assert_eq!(image.height(), 2048);
+}
+
+/// Regression test: DCTDecode with preceding FlateDecode filter.
+///
+/// Some PDFs use filter chains like [FlateDecode, DCTDecode] where the raw
+/// stream data is deflate-compressed JPEG. The extractor must decode the full
+/// chain (inflate first, then pass-through DCT) and return valid JPEG data.
+///
+/// Before this fix, the extractor would return raw deflate-compressed bytes
+/// tagged as JPEG, causing `to_dynamic_image()` to fail (e.g., graph_ocred.pdf).
+#[test]
+fn test_jpeg_with_flatedecode_chain() {
+    use flate2::write::ZlibEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+
+    // Minimal JPEG data (header bytes)
+    let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46];
+
+    // Deflate-compress the JPEG data (simulates FlateDecode)
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(&jpeg_data).unwrap();
+    let compressed = encoder.finish().unwrap();
+
+    // Verify compressed data starts with zlib header, not JPEG magic
+    assert_eq!(compressed[0], 0x78, "Expected zlib header byte");
+    assert_ne!(compressed[0], 0xFF, "Compressed data should NOT start with FF");
+
+    let mut dict = HashMap::new();
+    dict.insert("Subtype".to_string(), Object::Name("Image".to_string()));
+    dict.insert("Width".to_string(), Object::Integer(100));
+    dict.insert("Height".to_string(), Object::Integer(100));
+    dict.insert("BitsPerComponent".to_string(), Object::Integer(8));
+    dict.insert(
+        "ColorSpace".to_string(),
+        Object::Name("DeviceRGB".to_string()),
+    );
+    // Filter chain: FlateDecode first, then DCTDecode
+    dict.insert(
+        "Filter".to_string(),
+        Object::Array(vec![
+            Object::Name("FlateDecode".to_string()),
+            Object::Name("DCTDecode".to_string()),
+        ]),
+    );
+
+    let xobject = Object::Stream {
+        dict,
+        data: bytes::Bytes::from(compressed),
+    };
+
+    let image = extract_image_from_xobject(None, &xobject, None).unwrap();
+
+    // Must return JPEG data (not raw pixels)
+    match image.data() {
+        ImageData::Jpeg(data) => {
+            // The decoded data should be the original JPEG bytes
+            assert_eq!(data, &jpeg_data, "Decoded JPEG data should match original");
+            assert_eq!(data[0], 0xFF, "JPEG data should start with FF");
+            assert_eq!(data[1], 0xD8, "JPEG data should have D8 as second byte");
+        },
+        ImageData::Raw { .. } => {
+            panic!("Expected JPEG data, got Raw — DCTDecode filter chain not handled correctly")
+        },
+    }
+}
+
+/// Verify that single DCTDecode still does raw pass-through (no decoding).
+#[test]
+fn test_jpeg_single_dctdecode_passthrough() {
+    let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+
+    let mut dict = HashMap::new();
+    dict.insert("Subtype".to_string(), Object::Name("Image".to_string()));
+    dict.insert("Width".to_string(), Object::Integer(50));
+    dict.insert("Height".to_string(), Object::Integer(50));
+    dict.insert("BitsPerComponent".to_string(), Object::Integer(8));
+    dict.insert(
+        "ColorSpace".to_string(),
+        Object::Name("DeviceRGB".to_string()),
+    );
+    // Single DCTDecode filter — raw pass-through
+    dict.insert(
+        "Filter".to_string(),
+        Object::Name("DCTDecode".to_string()),
+    );
+
+    let xobject = Object::Stream {
+        dict,
+        data: bytes::Bytes::from(jpeg_data.clone()),
+    };
+
+    let image = extract_image_from_xobject(None, &xobject, None).unwrap();
+
+    match image.data() {
+        ImageData::Jpeg(data) => {
+            // Raw pass-through: data should be identical to stream bytes
+            assert_eq!(data, &jpeg_data, "Single DCTDecode should pass through raw bytes");
+        },
+        _ => panic!("Expected JPEG data for single DCTDecode filter"),
+    }
+}
+
+/// Verify that DCTDecode in an array (single-element) still does raw pass-through.
+#[test]
+fn test_jpeg_single_dctdecode_in_array_passthrough() {
+    let jpeg_data = vec![0xFF, 0xD8, 0xFF, 0xE0];
+
+    let mut dict = HashMap::new();
+    dict.insert("Subtype".to_string(), Object::Name("Image".to_string()));
+    dict.insert("Width".to_string(), Object::Integer(50));
+    dict.insert("Height".to_string(), Object::Integer(50));
+    dict.insert("BitsPerComponent".to_string(), Object::Integer(8));
+    dict.insert(
+        "ColorSpace".to_string(),
+        Object::Name("DeviceRGB".to_string()),
+    );
+    // DCTDecode in a single-element array
+    dict.insert(
+        "Filter".to_string(),
+        Object::Array(vec![Object::Name("DCTDecode".to_string())]),
+    );
+
+    let xobject = Object::Stream {
+        dict,
+        data: bytes::Bytes::from(jpeg_data.clone()),
+    };
+
+    let image = extract_image_from_xobject(None, &xobject, None).unwrap();
+
+    match image.data() {
+        ImageData::Jpeg(data) => {
+            assert_eq!(data, &jpeg_data, "Single DCTDecode in array should pass through raw bytes");
+        },
+        _ => panic!("Expected JPEG data for DCTDecode in single-element array"),
+    }
 }

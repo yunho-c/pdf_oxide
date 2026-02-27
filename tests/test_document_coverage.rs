@@ -354,8 +354,8 @@ fn test_to_markdown_basic() {
     let pdf = build_minimal_pdf(Some("Markdown test"));
     let mut doc = PdfDocument::open_from_bytes(pdf).unwrap();
     let md = doc.to_markdown(0, &pdf_oxide::converters::ConversionOptions::default()).unwrap();
-    assert!(md.contains("Markdown") || md.contains("test") || md.is_empty() || true);
-    // Main point: it doesn't crash
+    // Main point: to_markdown doesn't crash on a minimal PDF
+    let _ = md;
 }
 
 #[test]

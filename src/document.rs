@@ -8362,7 +8362,7 @@ mod tests {
 
     #[test]
     fn test_parse_string_value_static_real() {
-        let obj = Object::Real(3.14);
+        let obj = Object::Real(std::f64::consts::PI);
         let result = PdfDocument::parse_string_value_static(Some(&obj));
         assert!(result.is_some());
         let s = result.unwrap();
@@ -9769,7 +9769,7 @@ mod tests {
 
     #[test]
     fn test_find_references_real_obj() {
-        assert!(PdfDocument::find_references(&Object::Real(3.14)).is_empty());
+        assert!(PdfDocument::find_references(&Object::Real(std::f64::consts::PI)).is_empty());
     }
 
     #[test]

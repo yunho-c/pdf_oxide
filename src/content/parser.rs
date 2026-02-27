@@ -3227,7 +3227,7 @@ mod tests {
         assert!(!regions.is_empty(), "Should find at least 1 region");
         // The region should cover the BT..ET block
         let (start, end) = regions[0];
-        assert!(start <= 0, "Region should start at or before BT");
+        assert_eq!(start, 0, "Region should start at BT");
         assert!(end >= 26, "Region should extend to or past ET");
     }
 

@@ -315,6 +315,62 @@ fn test_wasm_pdf_from_text_roundtrip() {
     assert!(text.contains("Plain"), "should contain source text");
 }
 
+// ============================================================================
+// Outline, Annotations, Paths — new WASM bindings
+// ============================================================================
+
+#[wasm_bindgen_test]
+fn test_get_outline_returns_null_or_array() {
+    let mut doc = doc_from_text("No outline here");
+    let result = doc.get_outline().unwrap();
+    // Text-only generated PDF has no outline, expect null
+    assert!(
+        result.is_null() || js_sys::Array::is_array(&result),
+        "getOutline should return null or an array"
+    );
+}
+
+#[wasm_bindgen_test]
+fn test_get_annotations_returns_array() {
+    let mut doc = doc_from_text("No annotations");
+    let result = doc.get_annotations(0).unwrap();
+    assert!(
+        js_sys::Array::is_array(&result),
+        "getAnnotations should return an array"
+    );
+    let arr = js_sys::Array::from(&result);
+    // Text-only PDF — expect 0 annotations
+    assert_eq!(arr.length(), 0, "text-only PDF should have no annotations");
+}
+
+#[wasm_bindgen_test]
+fn test_get_annotations_invalid_page() {
+    let mut doc = doc_from_text("Hello");
+    let result = doc.get_annotations(999);
+    assert!(result.is_err(), "invalid page should return error");
+}
+
+#[wasm_bindgen_test]
+fn test_extract_paths_returns_array() {
+    let mut doc = doc_from_text("No paths");
+    let result = doc.extract_paths(0).unwrap();
+    assert!(
+        js_sys::Array::is_array(&result),
+        "extractPaths should return an array"
+    );
+}
+
+#[wasm_bindgen_test]
+fn test_extract_paths_invalid_page() {
+    let mut doc = doc_from_text("Hello");
+    let result = doc.extract_paths(999);
+    assert!(result.is_err(), "invalid page should return error");
+}
+
+// ============================================================================
+// PDF creation — metadata verification
+// ============================================================================
+
 #[wasm_bindgen_test]
 fn test_wasm_pdf_metadata() {
     let pdf = WasmPdf::from_text(
