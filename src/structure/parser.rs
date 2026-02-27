@@ -7,13 +7,86 @@ use crate::document::PdfDocument;
 use crate::error::Error;
 use crate::object::Object;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
 
-/// Maximum time allowed for structure tree parsing.
+/// Maximum time allowed for structure tree parsing (native only).
 /// Documents with huge trees (50K+ elements) would take 5-10s;
 /// a 200ms budget lets small/medium trees parse fully while
 /// large trees fall back to content-stream order gracefully.
-const STRUCT_TREE_PARSE_BUDGET: Duration = Duration::from_millis(200);
+#[cfg(not(target_arch = "wasm32"))]
+const STRUCT_TREE_PARSE_BUDGET: std::time::Duration = std::time::Duration::from_millis(200);
+
+/// A deadline guard that works on both native and WASM targets.
+///
+/// On native, uses `std::time::Instant` for real time-based deadlines.
+/// On `wasm32-unknown-unknown`, `std::time::Instant` panics at runtime,
+/// so this becomes a no-op and the parser relies solely on `MAX_STRUCT_ELEMENTS`.
+#[derive(Clone, Copy)]
+struct Deadline {
+    #[cfg(not(target_arch = "wasm32"))]
+    instant: std::time::Instant,
+}
+
+impl Deadline {
+    /// Create a deadline that expires after the configured budget.
+    fn new() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self {
+                instant: std::time::Instant::now() + STRUCT_TREE_PARSE_BUDGET,
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self {}
+        }
+    }
+
+    /// Returns `true` if the deadline has been exceeded.
+    #[inline]
+    fn is_expired(&self) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            std::time::Instant::now() > self.instant
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            false
+        }
+    }
+}
+
+/// A timer for measuring elapsed time, WASM-safe.
+#[derive(Clone, Copy)]
+struct Timer {
+    #[cfg(not(target_arch = "wasm32"))]
+    start: std::time::Instant,
+}
+
+impl Timer {
+    fn now() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self {
+                start: std::time::Instant::now(),
+            }
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            Self {}
+        }
+    }
+
+    fn elapsed_debug(&self) -> String {
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            format!("{:?}", self.start.elapsed())
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            "(time unavailable on wasm)".to_string()
+        }
+    }
+}
 
 /// Maximum number of structure elements to parse.
 /// Trees larger than this cause expensive traversal (seconds for 50K+ elements).
@@ -129,7 +202,7 @@ fn build_page_map_recursive(
 /// * `Ok(None)` - If the document is not tagged or the tree is too large to parse in budget
 /// * `Err(Error)` - If parsing fails
 pub fn parse_structure_tree(document: &mut PdfDocument) -> Result<Option<StructTreeRoot>, Error> {
-    let parse_start = Instant::now();
+    let parse_start = Timer::now();
 
     // Get catalog
     let catalog = document.catalog()?;
@@ -148,7 +221,7 @@ pub fn parse_structure_tree(document: &mut PdfDocument) -> Result<Option<StructT
     let page_map = build_page_map(document);
 
     // Start the deadline AFTER page map building (which is fixed cost)
-    let deadline = Instant::now() + STRUCT_TREE_PARSE_BUDGET;
+    let deadline = Deadline::new();
 
     // Resolve the StructTreeRoot object
     let struct_tree_root_obj = resolve_object(document, struct_tree_root_ref)?;
@@ -187,10 +260,9 @@ pub fn parse_structure_tree(document: &mut PdfDocument) -> Result<Option<StructT
             Object::Array(arr) => {
                 // Multiple root elements
                 for elem_obj in arr {
-                    if Instant::now() > deadline {
+                    if deadline.is_expired() {
                         log::debug!(
-                            "Structure tree parse budget exceeded ({:?}), falling back to content order",
-                            STRUCT_TREE_PARSE_BUDGET
+                            "Structure tree parse budget exceeded, falling back to content order"
                         );
                         return Ok(None);
                     }
@@ -230,10 +302,10 @@ pub fn parse_structure_tree(document: &mut PdfDocument) -> Result<Option<StructT
     }
 
     log::debug!(
-        "Structure tree parsed: {} elements, {} root elements in {:?}",
+        "Structure tree parsed: {} elements, {} root elements in {}",
         element_count,
         struct_tree.root_elements.len(),
-        parse_start.elapsed()
+        parse_start.elapsed_debug()
     );
 
     if element_count > MAX_STRUCT_ELEMENTS {
@@ -257,11 +329,11 @@ fn parse_struct_elem(
     obj: &Object,
     role_map: &HashMap<String, String>,
     page_map: &HashMap<u32, u32>,
-    deadline: Instant,
+    deadline: Deadline,
     element_count: &mut usize,
 ) -> Result<Option<StructElem>, Error> {
     // Check budgets before doing work
-    if Instant::now() > deadline || *element_count > MAX_STRUCT_ELEMENTS {
+    if deadline.is_expired() || *element_count > MAX_STRUCT_ELEMENTS {
         return Ok(None);
     }
     *element_count += 1;
@@ -349,7 +421,7 @@ fn parse_k_children(
     parent: &mut StructElem,
     role_map: &HashMap<String, String>,
     page_map: &HashMap<u32, u32>,
-    deadline: Instant,
+    deadline: Deadline,
     element_count: &mut usize,
 ) -> Result<(), Error> {
     match k_obj {
@@ -365,7 +437,7 @@ fn parse_k_children(
             // Array of children
             for child_obj in arr {
                 // Check both time and element count budgets
-                if Instant::now() > deadline || *element_count > MAX_STRUCT_ELEMENTS {
+                if deadline.is_expired() || *element_count > MAX_STRUCT_ELEMENTS {
                     return Ok(());
                 }
 
