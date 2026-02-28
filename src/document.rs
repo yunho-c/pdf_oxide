@@ -6191,6 +6191,12 @@ impl PdfDocument {
     }
 
     /// Generate Markdown for extracted images.
+    ///
+    /// Skips images exceeding `MAX_EMBED_PIXELS` (4 megapixels) when embedding
+    /// as base64. These are typically full-page scans or high-res presentation
+    /// slides that would produce 200-700KB of base64 per page with no useful
+    /// content benefit (the text is already extracted). A placeholder comment
+    /// is emitted instead.
     fn generate_image_markdown(
         &self,
         images: &[crate::extractors::PdfImage],
@@ -6199,16 +6205,34 @@ impl PdfDocument {
     ) -> Result<String> {
         use std::path::Path;
 
+        // 4 megapixels — covers charts, figures, diagrams (typical: 200×200 to 1500×1500)
+        // but skips full-page scans (2883×3655 = 10.5MP, 4320×6496 = 28MP)
+        const MAX_EMBED_PIXELS: u64 = 4_000_000;
+
         let mut markdown = String::new();
-        markdown.push_str("\n\n---\n\n");
+        let mut has_content = false;
 
         for (i, image) in images.iter().enumerate() {
-            let alt = format!("Image {} from page {}", i + 1, page_index + 1);
+            let pixels = image.width() as u64 * image.height() as u64;
 
             if options.embed_images {
-                // Embed as base64 data URI (works in Obsidian, Typora, VS Code, Jupyter, etc.)
+                if pixels > MAX_EMBED_PIXELS {
+                    log::debug!(
+                        "Skipping oversized image {} ({}x{} = {}MP) for base64 embedding",
+                        i,
+                        image.width(),
+                        image.height(),
+                        pixels / 1_000_000,
+                    );
+                    continue;
+                }
                 match image.to_base64_data_uri() {
                     Ok(data_uri) => {
+                        if !has_content {
+                            markdown.push_str("\n\n---\n\n");
+                            has_content = true;
+                        }
+                        let alt = format!("Image {} from page {}", i + 1, page_index + 1);
                         markdown.push_str(&format!("![{}]({})\n\n", alt, data_uri));
                     },
                     Err(e) => {
@@ -6216,17 +6240,21 @@ impl PdfDocument {
                     },
                 }
             } else if let Some(ref output_dir) = options.image_output_dir {
-                // Save to file and reference by path
+                // Save to file and reference by path (no size limit for file saves)
                 let filename = format!("page{}_{}.png", page_index + 1, i + 1);
                 let filepath = Path::new(output_dir).join(&filename);
 
-                // Create directory if needed
                 if let Some(parent) = filepath.parent() {
                     std::fs::create_dir_all(parent).ok();
                 }
 
                 match image.save_as_png(&filepath) {
                     Ok(()) => {
+                        if !has_content {
+                            markdown.push_str("\n\n---\n\n");
+                            has_content = true;
+                        }
+                        let alt = format!("Image {} from page {}", i + 1, page_index + 1);
                         let relative_path = format!("{}/{}", output_dir, filename);
                         markdown.push_str(&format!("![{}]({})\n\n", alt, relative_path));
                     },
@@ -6235,7 +6263,6 @@ impl PdfDocument {
                     },
                 }
             }
-            // If embed_images=false and no output_dir, skip image
         }
 
         Ok(markdown)
