@@ -6945,7 +6945,7 @@ mod tests {
         let font = create_test_font();
         let result = decode_text_to_unicode(b"ABC", Some(&font));
         // With WinAnsiEncoding, ASCII characters should map correctly
-        assert!(result.contains('A') || result.len() > 0, "Should decode something");
+        assert!(result.contains('A') || !result.is_empty(), "Should decode something");
     }
 
     // ========================================================================
@@ -9370,9 +9370,11 @@ mod tests {
 
     #[test]
     fn test_should_insert_space_with_email_config() {
-        let mut config = SpanMergingConfig::default();
-        config.detect_email_patterns = true;
-        config.email_threshold_multiplier = 2.5;
+        let config = SpanMergingConfig {
+            detect_email_patterns: true,
+            email_threshold_multiplier: 2.5,
+            ..Default::default()
+        };
         let fonts = HashMap::new();
 
         // Email context with gap below threshold: suppress space
@@ -9384,9 +9386,11 @@ mod tests {
 
     #[test]
     fn test_should_insert_space_email_large_gap() {
-        let mut config = SpanMergingConfig::default();
-        config.detect_email_patterns = true;
-        config.email_threshold_multiplier = 2.5;
+        let config = SpanMergingConfig {
+            detect_email_patterns: true,
+            email_threshold_multiplier: 2.5,
+            ..Default::default()
+        };
         let fonts = HashMap::new();
 
         // Email context with very large gap: insert space
@@ -9398,8 +9402,10 @@ mod tests {
 
     #[test]
     fn test_should_insert_space_email_with_font_info() {
-        let mut config = SpanMergingConfig::default();
-        config.detect_email_patterns = true;
+        let config = SpanMergingConfig {
+            detect_email_patterns: true,
+            ..Default::default()
+        };
         let mut fonts: HashMap<String, Arc<FontInfo>> = HashMap::new();
         let font = create_test_font();
         fonts.insert("F1".to_string(), Arc::new(font));
@@ -9417,9 +9423,11 @@ mod tests {
 
     #[test]
     fn test_should_insert_space_citation_context() {
-        let mut config = SpanMergingConfig::default();
-        config.detect_citation_markers = true;
-        config.citation_font_size_ratio = 0.75;
+        let config = SpanMergingConfig {
+            detect_citation_markers: true,
+            citation_font_size_ratio: 0.75,
+            ..Default::default()
+        };
         let fonts = HashMap::new();
 
         let prev_bbox = Rect::new(10.0, 100.0, 50.0, 12.0);
@@ -9434,8 +9442,10 @@ mod tests {
 
     #[test]
     fn test_should_insert_space_citation_geometric() {
-        let mut config = SpanMergingConfig::default();
-        config.detect_citation_markers = true;
+        let config = SpanMergingConfig {
+            detect_citation_markers: true,
+            ..Default::default()
+        };
         let fonts = HashMap::new();
 
         let prev_bbox = Rect::new(10.0, 100.0, 50.0, 12.0);
@@ -9451,8 +9461,10 @@ mod tests {
 
     #[test]
     fn test_should_insert_space_citation_with_font() {
-        let mut config = SpanMergingConfig::default();
-        config.detect_citation_markers = true;
+        let config = SpanMergingConfig {
+            detect_citation_markers: true,
+            ..Default::default()
+        };
         let mut fonts: HashMap<String, Arc<FontInfo>> = HashMap::new();
         fonts.insert("F1".to_string(), Arc::new(create_test_font()));
 
@@ -9791,9 +9803,9 @@ mod tests {
     #[test]
     fn test_cmyk_to_rgb_mixed() {
         let (r, g, b) = cmyk_to_rgb(0.5, 0.3, 0.1, 0.2);
-        assert!(r >= 0.0 && r <= 1.0);
-        assert!(g >= 0.0 && g <= 1.0);
-        assert!(b >= 0.0 && b <= 1.0);
+        assert!((0.0..=1.0).contains(&r));
+        assert!((0.0..=1.0).contains(&g));
+        assert!((0.0..=1.0).contains(&b));
     }
 
     #[test]
@@ -10318,7 +10330,7 @@ mod tests {
         // Boundary at 0 means empty first cluster
         let clusters = extractor.partition_characters_by_boundaries(&chars, vec![0]);
         // Should have just one cluster (boundary at 0 produces no items before it)
-        assert!(clusters.len() >= 1);
+        assert!(!clusters.is_empty());
     }
 
     // ========================================================================
@@ -10637,7 +10649,7 @@ mod tests {
 
         let stream = b"BT /F1 12 Tf 100 700 Td (Policy) Tj ET";
         let chars = extractor.extract(stream).unwrap();
-        assert!(chars.len() > 0);
+        assert!(!chars.is_empty());
     }
 
     // ========================================================================

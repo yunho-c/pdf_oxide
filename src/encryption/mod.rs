@@ -610,7 +610,7 @@ mod tests {
     fn test_algorithm_clone_copy() {
         let a = Algorithm::Aes128;
         let b = a; // Copy
-        let c = a.clone();
+        let c = a;
         assert_eq!(a, b);
         assert_eq!(a, c);
     }
@@ -1113,7 +1113,7 @@ mod tests {
     fn test_permissions_clone_copy() {
         let p = Permissions::from_bits(-1);
         let p2 = p; // Copy
-        let p3 = p.clone();
+        let p3 = p;
         assert!(p2.can_print());
         assert!(p3.can_print());
     }

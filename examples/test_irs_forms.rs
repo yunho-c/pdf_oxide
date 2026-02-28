@@ -1,6 +1,5 @@
-/// Focused test: fill IRS W-2 with realistic values, save incremental, reopen,
-/// and dump extract_text / to_markdown output for visual confirmation.
-
+//! Focused test: fill IRS W-2 with realistic values, save incremental, reopen,
+//! and dump extract_text / to_markdown output for visual confirmation.
 use pdf_oxide::PdfDocument;
 use pdf_oxide::converters::ConversionOptions;
 use pdf_oxide::editor::{DocumentEditor, EditableDocument, SaveOptions};

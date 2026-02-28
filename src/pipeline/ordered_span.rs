@@ -340,7 +340,7 @@ mod tests {
     fn test_reading_order_source_clone_copy_eq() {
         let source = ReadingOrderSource::Geometric;
         let copied = source;
-        let cloned = source.clone();
+        let cloned = source;
         assert_eq!(source, copied);
         assert_eq!(source, cloned);
         assert_ne!(source, ReadingOrderSource::Fallback);

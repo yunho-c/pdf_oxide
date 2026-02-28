@@ -463,11 +463,11 @@ fn test_structure_tree_tagged_pdf() {
 fn test_xref_reconstruction_corrupt_xref() {
     // Build a PDF with a corrupted xref table
     let mut pdf = b"%PDF-1.7\n".to_vec();
-    let off1 = pdf.len();
+    let _off1 = pdf.len();
     pdf.extend_from_slice(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
-    let off2 = pdf.len();
+    let _off2 = pdf.len();
     pdf.extend_from_slice(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n");
-    let off3 = pdf.len();
+    let _off3 = pdf.len();
     pdf.extend_from_slice(
         b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\n",
     );

@@ -2046,7 +2046,7 @@ impl PdfDocument {
                 None => continue,
             };
             if let Some(xobj_dict) = xobj_obj.as_dict() {
-                for (_name, val) in xobj_dict {
+                for val in xobj_dict.values() {
                     if let Some(obj_ref) = val.as_reference() {
                         if !self.image_xobject_cache.contains(&obj_ref) {
                             xobj_refs.push(obj_ref);
@@ -3255,7 +3255,7 @@ impl PdfDocument {
                 Some(s) => s.to_string(),
                 None => continue,
             };
-            if subtype.to_ascii_lowercase() != "widget" {
+            if !subtype.eq_ignore_ascii_case("widget") {
                 continue;
             }
 
@@ -3431,14 +3431,14 @@ impl PdfDocument {
                         let size = Self::parse_font_size_from_da(&da_str);
                         if size <= 0.0 {
                             // Auto-size: estimate from rect height
-                            (rect.height * 0.7).min(24.0).max(6.0)
+                            (rect.height * 0.7).clamp(6.0, 24.0)
                         } else {
                             size
                         }
                     },
                     None => {
                         // No DA at all: estimate from rect height
-                        (rect.height * 0.7).min(24.0).max(6.0)
+                        (rect.height * 0.7).clamp(6.0, 24.0)
                     },
                 }
             };
@@ -4044,7 +4044,7 @@ impl PdfDocument {
             };
             if let Some(xobj_dict_resolved) = xobj_dict_obj {
                 if let Some(xobj_dict) = xobj_dict_resolved.as_dict() {
-                    for (_name, xobj_ref) in xobj_dict {
+                    for xobj_ref in xobj_dict.values() {
                         if let Some(ref_obj) = xobj_ref.as_reference() {
                             // Use lightweight 1KB peek instead of full object load
                             if self.is_form_xobject(ref_obj) {

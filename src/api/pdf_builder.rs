@@ -2258,8 +2258,8 @@ impl PdfBuilder {
         })
     }
 
-    /// Internal: Build PDF from multiple ImageData.
-    fn from_image_data_multiple(self, images: Vec<crate::writer::ImageData>) -> Result<Pdf> {
+    /// Build PDF from multiple ImageData objects.
+    pub fn from_image_data_multiple(self, images: Vec<crate::writer::ImageData>) -> Result<Pdf> {
         let bytes = self.render_images(&images)?;
         Ok(Pdf {
             bytes,

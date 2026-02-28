@@ -635,8 +635,10 @@ mod tests {
 
     #[test]
     fn test_layer_ocg_dict_falls_back_to_name() {
-        let mut layer = Layer::default();
-        layer.name = "fallback_name".to_string();
+        let layer = Layer {
+            name: "fallback_name".to_string(),
+            ..Default::default()
+        };
         // display_name is None, so build_ocg_dict should use name
         let dict = layer.build_ocg_dict();
         if let Some(Object::String(name_bytes)) = dict.get("Name") {

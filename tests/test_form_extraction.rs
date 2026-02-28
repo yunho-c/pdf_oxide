@@ -114,7 +114,7 @@ fn test_extract_text_field_readonly_flag() {
 
     // Check read-only flag (bit 1)
     assert!(
-        ssn_field.flags.map_or(false, |f| f & 1 != 0),
+        ssn_field.flags.is_some_and(|f| f & 1 != 0),
         "SSN field should be read-only"
     );
 }

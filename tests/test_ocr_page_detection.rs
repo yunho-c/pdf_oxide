@@ -1,3 +1,4 @@
+#[cfg(feature = "ocr")]
 use pdf_oxide::document::PdfDocument;
 
 #[cfg(feature = "ocr")]

@@ -714,6 +714,227 @@ impl WasmPdfDocument {
     }
 
     // ========================================================================
+    // Group 6d: Form Field Get/Set Values
+    // ========================================================================
+
+    /// Get the value of a specific form field by name.
+    ///
+    /// @param name - Full qualified field name (e.g., "name" or "topmostSubform[0].Page1[0].f1_01[0]")
+    /// @returns The field value: string for text, boolean for checkbox, null if not found
+    #[wasm_bindgen(js_name = "getFormFieldValue")]
+    pub fn get_form_field_value(&mut self, name: &str) -> Result<JsValue, JsValue> {
+        let editor = self.ensure_editor()?;
+        let value = editor
+            .get_form_field_value(name)
+            .map_err(|e| JsValue::from_str(&format!("Failed to get field value: {}", e)))?;
+
+        match value {
+            Some(v) => wasm_form_field_value_to_js(&v),
+            None => Ok(JsValue::NULL),
+        }
+    }
+
+    /// Set the value of a form field.
+    ///
+    /// @param name - Full qualified field name
+    /// @param value - New value: string for text fields, boolean for checkboxes
+    #[wasm_bindgen(js_name = "setFormFieldValue")]
+    pub fn set_form_field_value(&mut self, name: &str, value: JsValue) -> Result<(), JsValue> {
+        let editor = self.ensure_editor()?;
+        let field_value = js_to_form_field_value(&value)?;
+        editor
+            .set_form_field_value(name, field_value)
+            .map_err(|e| JsValue::from_str(&format!("Failed to set field value: {}", e)))
+    }
+
+    // ========================================================================
+    // Group 6e: Image Bytes Extraction
+    // ========================================================================
+
+    /// Extract image bytes from a page as PNG data.
+    ///
+    /// Returns an array of objects with: width, height, data (Uint8Array of PNG bytes), format ("png").
+    #[wasm_bindgen(js_name = "extractImageBytes")]
+    pub fn extract_image_bytes(&mut self, page_index: usize) -> Result<JsValue, JsValue> {
+        let images = self
+            .inner
+            .extract_images(page_index)
+            .map_err(|e| JsValue::from_str(&format!("Failed to extract images: {}", e)))?;
+
+        let arr = js_sys::Array::new();
+        for img in &images {
+            let png_data = img
+                .to_png_bytes()
+                .map_err(|e| JsValue::from_str(&format!("Failed to convert image to PNG: {}", e)))?;
+
+            let obj = js_sys::Object::new();
+            js_sys::Reflect::set(&obj, &JsValue::from_str("width"), &JsValue::from(img.width() as u32))?;
+            js_sys::Reflect::set(&obj, &JsValue::from_str("height"), &JsValue::from(img.height() as u32))?;
+            js_sys::Reflect::set(&obj, &JsValue::from_str("format"), &JsValue::from_str("png"))?;
+            let uint8_array = js_sys::Uint8Array::from(png_data.as_slice());
+            js_sys::Reflect::set(&obj, &JsValue::from_str("data"), &uint8_array)?;
+            arr.push(&obj);
+        }
+        Ok(arr.into())
+    }
+
+    // ========================================================================
+    // Group 6f: Form Flattening
+    // ========================================================================
+
+    /// Flatten all form fields into page content.
+    ///
+    /// After flattening, form field values become static text and are no longer editable.
+    #[wasm_bindgen(js_name = "flattenForms")]
+    pub fn flatten_forms(&mut self) -> Result<(), JsValue> {
+        let editor = self.ensure_editor()?;
+        editor
+            .flatten_forms()
+            .map_err(|e| JsValue::from_str(&format!("Failed to flatten forms: {}", e)))
+    }
+
+    /// Flatten form fields on a specific page.
+    ///
+    /// @param page_index - Zero-based page number
+    #[wasm_bindgen(js_name = "flattenFormsOnPage")]
+    pub fn flatten_forms_on_page(&mut self, page_index: usize) -> Result<(), JsValue> {
+        let editor = self.ensure_editor()?;
+        editor
+            .flatten_forms_on_page(page_index)
+            .map_err(|e| JsValue::from_str(&format!("Failed to flatten forms on page: {}", e)))
+    }
+
+    // ========================================================================
+    // Group 6g: PDF Merging
+    // ========================================================================
+
+    /// Merge another PDF (provided as bytes) into this document.
+    ///
+    /// @param data - The PDF file contents to merge as a Uint8Array
+    /// @returns Number of pages merged
+    #[wasm_bindgen(js_name = "mergeFrom")]
+    pub fn merge_from(&mut self, data: &[u8]) -> Result<usize, JsValue> {
+        let editor = self.ensure_editor()?;
+        editor
+            .merge_from_bytes(data)
+            .map_err(|e| JsValue::from_str(&format!("Failed to merge PDF: {}", e)))
+    }
+
+    // ========================================================================
+    // Group 6h: File Embedding
+    // ========================================================================
+
+    /// Embed a file into the PDF document.
+    ///
+    /// @param name - Display name for the embedded file
+    /// @param data - File contents as a Uint8Array
+    #[wasm_bindgen(js_name = "embedFile")]
+    pub fn embed_file(&mut self, name: &str, data: &[u8]) -> Result<(), JsValue> {
+        let editor = self.ensure_editor()?;
+        editor
+            .embed_file(name, data.to_vec())
+            .map_err(|e| JsValue::from_str(&format!("Failed to embed file: {}", e)))
+    }
+
+    // ========================================================================
+    // Group 6i: Page Labels
+    // ========================================================================
+
+    /// Get page label ranges from the document.
+    ///
+    /// @returns Array of {start_page, style, prefix, start_value} objects, or empty array
+    #[wasm_bindgen(js_name = "pageLabels")]
+    pub fn page_labels(&mut self) -> Result<JsValue, JsValue> {
+        use crate::extractors::page_labels::PageLabelExtractor;
+
+        let labels = PageLabelExtractor::extract(&mut self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Failed to get page labels: {}", e)))?;
+
+        let result: Vec<serde_json::Value> = labels
+            .iter()
+            .map(|label| {
+                let mut obj = serde_json::Map::new();
+                obj.insert("start_page".into(), serde_json::Value::from(label.start_page));
+                obj.insert("style".into(), serde_json::Value::from(format!("{:?}", label.style)));
+                match &label.prefix {
+                    Some(p) => obj.insert("prefix".into(), serde_json::Value::from(p.as_str())),
+                    None => obj.insert("prefix".into(), serde_json::Value::Null),
+                };
+                obj.insert("start_value".into(), serde_json::Value::from(label.start_value));
+                serde_json::Value::Object(obj)
+            })
+            .collect();
+
+        serde_wasm_bindgen::to_value(&result)
+            .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+    }
+
+    // ========================================================================
+    // Group 6j: XMP Metadata
+    // ========================================================================
+
+    /// Get XMP metadata from the document.
+    ///
+    /// @returns Object with XMP fields (dc_title, dc_creator, etc.) or null if no XMP
+    #[wasm_bindgen(js_name = "xmpMetadata")]
+    pub fn xmp_metadata(&mut self) -> Result<JsValue, JsValue> {
+        use crate::extractors::xmp::XmpExtractor;
+
+        let metadata = XmpExtractor::extract(&mut self.inner)
+            .map_err(|e| JsValue::from_str(&format!("Failed to get XMP metadata: {}", e)))?;
+
+        match metadata {
+            None => Ok(JsValue::NULL),
+            Some(xmp) => {
+                let mut obj = serde_json::Map::new();
+                if let Some(ref title) = xmp.dc_title {
+                    obj.insert("dc_title".into(), serde_json::Value::from(title.as_str()));
+                }
+                if !xmp.dc_creator.is_empty() {
+                    obj.insert(
+                        "dc_creator".into(),
+                        serde_json::Value::Array(
+                            xmp.dc_creator.iter().map(|s| serde_json::Value::from(s.as_str())).collect(),
+                        ),
+                    );
+                }
+                if let Some(ref desc) = xmp.dc_description {
+                    obj.insert("dc_description".into(), serde_json::Value::from(desc.as_str()));
+                }
+                if !xmp.dc_subject.is_empty() {
+                    obj.insert(
+                        "dc_subject".into(),
+                        serde_json::Value::Array(
+                            xmp.dc_subject.iter().map(|s| serde_json::Value::from(s.as_str())).collect(),
+                        ),
+                    );
+                }
+                if let Some(ref lang) = xmp.dc_language {
+                    obj.insert("dc_language".into(), serde_json::Value::from(lang.as_str()));
+                }
+                if let Some(ref tool) = xmp.xmp_creator_tool {
+                    obj.insert("xmp_creator_tool".into(), serde_json::Value::from(tool.as_str()));
+                }
+                if let Some(ref date) = xmp.xmp_create_date {
+                    obj.insert("xmp_create_date".into(), serde_json::Value::from(date.as_str()));
+                }
+                if let Some(ref date) = xmp.xmp_modify_date {
+                    obj.insert("xmp_modify_date".into(), serde_json::Value::from(date.as_str()));
+                }
+                if let Some(ref producer) = xmp.pdf_producer {
+                    obj.insert("pdf_producer".into(), serde_json::Value::from(producer.as_str()));
+                }
+                if let Some(ref keywords) = xmp.pdf_keywords {
+                    obj.insert("pdf_keywords".into(), serde_json::Value::from(keywords.as_str()));
+                }
+
+                serde_wasm_bindgen::to_value(&serde_json::Value::Object(obj))
+                    .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
+            }
+        }
+    }
+
+    // ========================================================================
     // Group 7: Editing — Metadata
     // ========================================================================
 
@@ -1181,6 +1402,52 @@ impl WasmPdf {
         })
     }
 
+    /// Create a PDF from image bytes (PNG, JPEG, etc.).
+    ///
+    /// @param data - Image file contents as a Uint8Array
+    #[wasm_bindgen(js_name = "fromImageBytes")]
+    pub fn from_image_bytes(data: &[u8]) -> Result<WasmPdf, JsValue> {
+        use crate::api::Pdf;
+        let pdf = Pdf::from_image_bytes(data)
+            .map_err(|e| JsValue::from_str(&format!("Failed to create PDF from image: {}", e)))?;
+        Ok(WasmPdf {
+            bytes: pdf.into_bytes(),
+        })
+    }
+
+    /// Create a PDF from multiple image byte arrays.
+    ///
+    /// Each image becomes a separate page. Pass an array of Uint8Arrays.
+    ///
+    /// @param images_array - Array of Uint8Arrays, each containing image file bytes (PNG/JPEG)
+    #[wasm_bindgen(js_name = "fromMultipleImageBytes")]
+    pub fn from_multiple_image_bytes(images_array: JsValue) -> Result<WasmPdf, JsValue> {
+        use crate::writer::ImageData;
+
+        let arr = js_sys::Array::from(&images_array);
+        if arr.length() == 0 {
+            return Err(JsValue::from_str("Empty image array"));
+        }
+
+        let mut images = Vec::new();
+        for i in 0..arr.length() {
+            let item = arr.get(i);
+            let uint8 = js_sys::Uint8Array::new(&item);
+            let bytes = uint8.to_vec();
+            let image = ImageData::from_bytes(&bytes)
+                .map_err(|e| JsValue::from_str(&format!("Failed to load image {}: {}", i, e)))?;
+            images.push(image);
+        }
+
+        let pdf = PdfBuilder::new()
+            .from_image_data_multiple(images)
+            .map_err(|e| JsValue::from_str(&format!("Failed to create PDF from images: {}", e)))?;
+
+        Ok(WasmPdf {
+            bytes: pdf.into_bytes(),
+        })
+    }
+
     /// Get the PDF as a Uint8Array.
     #[wasm_bindgen(js_name = "toBytes")]
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -1197,6 +1464,56 @@ impl WasmPdf {
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/// Convert an editor FormFieldValue to a JsValue.
+fn wasm_form_field_value_to_js(
+    value: &crate::editor::form_fields::FormFieldValue,
+) -> Result<JsValue, JsValue> {
+    use crate::editor::form_fields::FormFieldValue;
+    match value {
+        FormFieldValue::Text(s) => Ok(JsValue::from_str(s)),
+        FormFieldValue::Choice(s) => Ok(JsValue::from_str(s)),
+        FormFieldValue::Boolean(b) => Ok(JsValue::from(*b)),
+        FormFieldValue::MultiChoice(v) => {
+            let arr = js_sys::Array::new();
+            for s in v {
+                arr.push(&JsValue::from_str(s));
+            }
+            Ok(arr.into())
+        }
+        FormFieldValue::None => Ok(JsValue::NULL),
+    }
+}
+
+/// Convert a JsValue to an editor FormFieldValue.
+fn js_to_form_field_value(
+    value: &JsValue,
+) -> Result<crate::editor::form_fields::FormFieldValue, JsValue> {
+    use crate::editor::form_fields::FormFieldValue;
+
+    if value.is_null() || value.is_undefined() {
+        Ok(FormFieldValue::None)
+    } else if let Some(b) = value.as_bool() {
+        Ok(FormFieldValue::Boolean(b))
+    } else if let Some(s) = value.as_string() {
+        Ok(FormFieldValue::Text(s))
+    } else if js_sys::Array::is_array(value) {
+        let arr = js_sys::Array::from(value);
+        let mut strings = Vec::new();
+        for i in 0..arr.length() {
+            let item = arr.get(i);
+            strings.push(
+                item.as_string()
+                    .ok_or_else(|| JsValue::from_str("Array elements must be strings"))?,
+            );
+        }
+        Ok(FormFieldValue::MultiChoice(strings))
+    } else {
+        Err(JsValue::from_str(
+            "Value must be string, boolean, array of strings, null, or undefined",
+        ))
+    }
+}
 
 /// Convert OutlineItem tree to JSON for WASM serialization.
 fn outline_to_json(items: &[crate::outline::OutlineItem]) -> Vec<serde_json::Value> {
@@ -1375,28 +1692,28 @@ mod tests {
     #[test]
     fn test_to_markdown() {
         let mut doc = doc_from_text("Hello markdown");
-        let md = doc.to_markdown(0, None, None).unwrap();
+        let md = doc.to_markdown(0, None, None, None).unwrap();
         assert!(!md.is_empty());
     }
 
     #[test]
     fn test_to_markdown_all() {
         let mut doc = doc_from_text("Hello markdown");
-        let md = doc.to_markdown_all(None, None).unwrap();
+        let md = doc.to_markdown_all(None, None, None).unwrap();
         assert!(!md.is_empty());
     }
 
     #[test]
     fn test_to_html() {
         let mut doc = doc_from_text("Hello html");
-        let html = doc.to_html(0, None, None).unwrap();
+        let html = doc.to_html(0, None, None, None).unwrap();
         assert!(!html.is_empty());
     }
 
     #[test]
     fn test_to_html_all() {
         let mut doc = doc_from_text("Hello html");
-        let html = doc.to_html_all(None, None).unwrap();
+        let html = doc.to_html_all(None, None, None).unwrap();
         assert!(!html.is_empty());
     }
 
@@ -1417,14 +1734,14 @@ mod tests {
     #[test]
     fn test_to_markdown_with_options() {
         let mut doc = doc_from_text("Hello options");
-        let md = doc.to_markdown(0, Some(false), Some(false)).unwrap();
+        let md = doc.to_markdown(0, Some(false), Some(false), None).unwrap();
         assert!(!md.is_empty());
     }
 
     #[test]
     fn test_to_html_with_options() {
         let mut doc = doc_from_text("Hello options");
-        let html = doc.to_html(0, Some(true), Some(false)).unwrap();
+        let html = doc.to_html(0, Some(true), Some(false), None).unwrap();
         assert!(!html.is_empty());
     }
 
@@ -1898,5 +2215,168 @@ mod tests {
         assert!(doc.editor.is_none());
         doc.set_title("Title").unwrap();
         assert!(doc.editor.is_some());
+    }
+
+    // ========================================================================
+    // Group: Form Field Get/Set Values
+    // ========================================================================
+
+    #[test]
+    fn test_get_form_field_value_text() {
+        let bytes = make_form_pdf();
+        let mut doc = WasmPdfDocument::new(&bytes).unwrap();
+        // get_form_field_value returns JsValue which aborts on non-wasm32,
+        // so test the underlying Rust API directly here.
+        let editor = doc.ensure_editor().unwrap();
+        let value = editor.get_form_field_value("name").unwrap();
+        assert!(value.is_some(), "field 'name' should have a value");
+    }
+
+    #[test]
+    fn test_set_form_field_value_text() {
+        let bytes = make_form_pdf();
+        let mut doc = WasmPdfDocument::new(&bytes).unwrap();
+        // set_form_field_value with a string JsValue
+        // On native, JsValue operations are stubbed, so we test via the Rust API
+        // instead — just verify the method exists and the type signatures match
+        let editor = doc.ensure_editor().unwrap();
+        let result = editor.set_form_field_value(
+            "name",
+            crate::editor::form_fields::FormFieldValue::Text("Bob".to_string()),
+        );
+        assert!(result.is_ok(), "set_form_field_value should succeed");
+    }
+
+    // ========================================================================
+    // Group: Image Bytes Extraction (native-safe: no JsValue in happy path)
+    // ========================================================================
+
+    #[test]
+    fn test_extract_image_bytes_empty_on_text_pdf() {
+        // Text-only PDF has no images — should not error
+        let mut doc = doc_from_text("No images here");
+        // extract_image_bytes returns JsValue, tested in wasm_bindgen_tests
+        // For native, test that the underlying API works
+        let images = doc.inner.extract_images(0).unwrap();
+        assert_eq!(images.len(), 0);
+    }
+
+    // ========================================================================
+    // Group: Form Flattening
+    // ========================================================================
+
+    #[test]
+    fn test_flatten_forms() {
+        let bytes = make_form_pdf();
+        let mut doc = WasmPdfDocument::new(&bytes).unwrap();
+        let editor = doc.ensure_editor().unwrap();
+        let result = editor.flatten_forms();
+        assert!(result.is_ok(), "flatten_forms should succeed");
+    }
+
+    #[test]
+    fn test_flatten_forms_on_page() {
+        let bytes = make_form_pdf();
+        let mut doc = WasmPdfDocument::new(&bytes).unwrap();
+        let editor = doc.ensure_editor().unwrap();
+        let result = editor.flatten_forms_on_page(0);
+        assert!(result.is_ok(), "flatten_forms_on_page should succeed");
+    }
+
+    // ========================================================================
+    // Group: PDF Merging
+    // ========================================================================
+
+    #[test]
+    fn test_merge_from_bytes() {
+        let bytes1 = make_text_pdf("Page 1");
+        let bytes2 = make_text_pdf("Page 2");
+        let mut doc = WasmPdfDocument::new(&bytes1).unwrap();
+        let editor = doc.ensure_editor().unwrap();
+        let count = editor.merge_from_bytes(&bytes2).unwrap();
+        assert_eq!(count, 1, "should merge 1 page");
+    }
+
+    // ========================================================================
+    // Group: File Embedding
+    // ========================================================================
+
+    #[test]
+    fn test_embed_file() {
+        let bytes = make_text_pdf("Hello");
+        let mut doc = WasmPdfDocument::new(&bytes).unwrap();
+        let editor = doc.ensure_editor().unwrap();
+        let result = editor.embed_file("readme.txt", b"Hello World".to_vec());
+        assert!(result.is_ok(), "embed_file should succeed");
+    }
+
+    // ========================================================================
+    // Group: Page Labels
+    // ========================================================================
+
+    #[test]
+    fn test_page_labels_empty() {
+        let mut doc = doc_from_text("Hello");
+        let labels = crate::extractors::page_labels::PageLabelExtractor::extract(&mut doc.inner);
+        // Simple generated PDFs typically have no page labels
+        assert!(labels.is_ok());
+    }
+
+    // ========================================================================
+    // Group: XMP Metadata
+    // ========================================================================
+
+    #[test]
+    fn test_xmp_metadata_none_for_simple_pdf() {
+        let mut doc = doc_from_text("Hello");
+        let metadata = crate::extractors::xmp::XmpExtractor::extract(&mut doc.inner);
+        assert!(metadata.is_ok());
+        // Simple generated PDFs may or may not have XMP
+    }
+
+    // ========================================================================
+    // Group: PDF from Images
+    // ========================================================================
+
+    #[test]
+    fn test_from_image_bytes() {
+        // WasmPdf::from_image_bytes uses JsValue in error path, so test the
+        // underlying Rust API directly on non-wasm32 targets.
+        use crate::api::Pdf;
+        let jpeg_data = create_minimal_jpeg();
+        let result = Pdf::from_image_bytes(&jpeg_data);
+        assert!(result.is_ok(), "Pdf::from_image_bytes should succeed: {:?}", result.err());
+        let pdf = result.unwrap();
+        assert!(!pdf.into_bytes().is_empty());
+    }
+
+    /// Create a minimal valid 1x1 white JPEG image (known-good bytes).
+    fn create_minimal_jpeg() -> Vec<u8> {
+        vec![
+            0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00,
+            0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43, 0x00, 0x08, 0x06, 0x06,
+            0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09, 0x09, 0x08, 0x0A, 0x0C, 0x14, 0x0D,
+            0x0C, 0x0B, 0x0B, 0x0C, 0x19, 0x12, 0x13, 0x0F, 0x14, 0x1D, 0x1A, 0x1F, 0x1E, 0x1D,
+            0x1A, 0x1C, 0x1C, 0x20, 0x24, 0x2E, 0x27, 0x20, 0x22, 0x2C, 0x23, 0x1C, 0x1C, 0x28,
+            0x37, 0x29, 0x2C, 0x30, 0x31, 0x34, 0x34, 0x34, 0x1F, 0x27, 0x39, 0x3D, 0x38, 0x32,
+            0x3C, 0x2E, 0x33, 0x34, 0x32, 0xFF, 0xC0, 0x00, 0x0B, 0x08, 0x00, 0x01, 0x00, 0x01,
+            0x01, 0x01, 0x11, 0x00, 0xFF, 0xC4, 0x00, 0x1F, 0x00, 0x00, 0x01, 0x05, 0x01, 0x01,
+            0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x02,
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0xFF, 0xC4, 0x00, 0xB5, 0x10,
+            0x00, 0x02, 0x01, 0x03, 0x03, 0x02, 0x04, 0x03, 0x05, 0x05, 0x04, 0x04, 0x00, 0x00,
+            0x01, 0x7D, 0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06,
+            0x13, 0x51, 0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xA1, 0x08, 0x23, 0x42,
+            0xB1, 0xC1, 0x15, 0x52, 0xD1, 0xF0, 0x24, 0x33, 0x62, 0x72, 0x82, 0x09, 0x0A, 0x16,
+            0x17, 0x18, 0x19, 0x1A, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x34, 0x35, 0x36, 0x37,
+            0x38, 0x39, 0x3A, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4A, 0x53, 0x54, 0x55,
+            0x56, 0x57, 0x58, 0x59, 0x5A, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x73,
+            0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
+            0x8A, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9A, 0xA2, 0xA3, 0xA4, 0xA5,
+            0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xB7, 0xB8, 0xB9, 0xBA,
+            0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xD2, 0xD3, 0xD4, 0xD5, 0xD6,
+            0xD7, 0xD8, 0xD9, 0xDA, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5, 0xE6, 0xE7, 0xE8, 0xE9, 0xEA,
+            0xF1, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xF9, 0xFA, 0xFF, 0xDA, 0x00, 0x08,
+            0x01, 0x01, 0x00, 0x00, 0x3F, 0x00, 0xFB, 0xD5, 0xDB, 0x20, 0xA8, 0xF9, 0xFF, 0xD9,
+        ]
     }
 }

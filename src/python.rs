@@ -1971,6 +1971,232 @@ impl PyPdfDocument {
         }
     }
 
+    // ========================================================================
+    // Image Bytes Extraction
+    // ========================================================================
+
+    /// Extract image bytes from a page as PNG data.
+    ///
+    /// Returns actual image pixel data (as PNG), unlike extract_images() which
+    /// returns only metadata.
+    ///
+    /// Args:
+    ///     page (int): Page index (0-based)
+    ///
+    /// Returns:
+    ///     list[dict]: List of dicts with keys: width (int), height (int),
+    ///         data (bytes, PNG-encoded), format (str, always "png")
+    ///
+    /// Raises:
+    ///     RuntimeError: If extraction or conversion fails
+    fn extract_image_bytes(&mut self, py: Python<'_>, page: usize) -> PyResult<Py<PyAny>> {
+        let images = self
+            .inner
+            .extract_images(page)
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to extract images: {}", e)))?;
+
+        let py_list = pyo3::types::PyList::empty(py);
+        for img in &images {
+            let png_data = img
+                .to_png_bytes()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to convert image to PNG: {}", e)))?;
+
+            let dict = pyo3::types::PyDict::new(py);
+            dict.set_item("width", img.width())?;
+            dict.set_item("height", img.height())?;
+            dict.set_item("format", "png")?;
+            dict.set_item("data", pyo3::types::PyBytes::new(py, &png_data))?;
+            py_list.append(dict)?;
+        }
+        Ok(py_list.into())
+    }
+
+    // ========================================================================
+    // Form Flattening
+    // ========================================================================
+
+    /// Flatten all form fields into page content.
+    ///
+    /// After flattening, form field values become static text and are no longer editable.
+    ///
+    /// Raises:
+    ///     RuntimeError: If flattening fails
+    fn flatten_forms(&mut self) -> PyResult<()> {
+        self.ensure_editor()?;
+        if let Some(ref mut editor) = self.editor {
+            editor
+                .flatten_forms()
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to flatten forms: {}", e)))
+        } else {
+            Err(PyRuntimeError::new_err("No document loaded"))
+        }
+    }
+
+    /// Flatten form fields on a specific page.
+    ///
+    /// Args:
+    ///     page (int): Page index (0-based)
+    ///
+    /// Raises:
+    ///     RuntimeError: If flattening fails
+    fn flatten_forms_on_page(&mut self, page: usize) -> PyResult<()> {
+        self.ensure_editor()?;
+        if let Some(ref mut editor) = self.editor {
+            editor
+                .flatten_forms_on_page(page)
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to flatten forms on page: {}", e)))
+        } else {
+            Err(PyRuntimeError::new_err("No document loaded"))
+        }
+    }
+
+    // ========================================================================
+    // PDF Merging
+    // ========================================================================
+
+    /// Merge another PDF into this document.
+    ///
+    /// Accepts either a file path (str) or raw PDF bytes.
+    ///
+    /// Args:
+    ///     source: File path (str) or PDF bytes
+    ///
+    /// Returns:
+    ///     int: Number of pages merged
+    ///
+    /// Raises:
+    ///     RuntimeError: If merge fails
+    fn merge_from(&mut self, source: &Bound<'_, PyAny>) -> PyResult<usize> {
+        self.ensure_editor()?;
+        let editor = self.editor.as_mut().unwrap();
+
+        if let Ok(path) = source.extract::<String>() {
+            editor
+                .merge_from(&path)
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to merge PDF: {}", e)))
+        } else if let Ok(data) = source.extract::<Vec<u8>>() {
+            editor
+                .merge_from_bytes(&data)
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to merge PDF: {}", e)))
+        } else {
+            Err(PyRuntimeError::new_err(
+                "source must be a file path (str) or PDF bytes",
+            ))
+        }
+    }
+
+    // ========================================================================
+    // File Embedding
+    // ========================================================================
+
+    /// Embed a file into the PDF document.
+    ///
+    /// Args:
+    ///     name (str): Display name for the embedded file
+    ///     data (bytes): File contents
+    ///
+    /// Raises:
+    ///     RuntimeError: If embedding fails
+    fn embed_file(&mut self, name: &str, data: &[u8]) -> PyResult<()> {
+        self.ensure_editor()?;
+        if let Some(ref mut editor) = self.editor {
+            editor
+                .embed_file(name, data.to_vec())
+                .map_err(|e| PyRuntimeError::new_err(format!("Failed to embed file: {}", e)))
+        } else {
+            Err(PyRuntimeError::new_err("No document loaded"))
+        }
+    }
+
+    // ========================================================================
+    // Page Labels
+    // ========================================================================
+
+    /// Get page label ranges from the document.
+    ///
+    /// Returns:
+    ///     list[dict]: List of dicts with keys: start_page (int), style (str),
+    ///         prefix (str | None), start_value (int)
+    ///
+    /// Raises:
+    ///     RuntimeError: If extraction fails
+    fn page_labels(&mut self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        use crate::extractors::page_labels::PageLabelExtractor;
+
+        let labels = PageLabelExtractor::extract(&mut self.inner)
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to get page labels: {}", e)))?;
+
+        let py_list = pyo3::types::PyList::empty(py);
+        for label in &labels {
+            let dict = pyo3::types::PyDict::new(py);
+            dict.set_item("start_page", label.start_page)?;
+            dict.set_item("style", format!("{:?}", label.style))?;
+            match &label.prefix {
+                Some(p) => dict.set_item("prefix", p)?,
+                None => dict.set_item("prefix", py.None())?,
+            };
+            dict.set_item("start_value", label.start_value)?;
+            py_list.append(dict)?;
+        }
+        Ok(py_list.into())
+    }
+
+    // ========================================================================
+    // XMP Metadata
+    // ========================================================================
+
+    /// Get XMP metadata from the document.
+    ///
+    /// Returns:
+    ///     dict | None: Dict with XMP fields (dc_title, dc_creator, etc.) or None
+    ///
+    /// Raises:
+    ///     RuntimeError: If extraction fails
+    fn xmp_metadata(&mut self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        use crate::extractors::xmp::XmpExtractor;
+
+        let metadata = XmpExtractor::extract(&mut self.inner)
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to get XMP metadata: {}", e)))?;
+
+        match metadata {
+            None => Ok(py.None()),
+            Some(xmp) => {
+                let dict = pyo3::types::PyDict::new(py);
+                if let Some(ref title) = xmp.dc_title {
+                    dict.set_item("dc_title", title)?;
+                }
+                if !xmp.dc_creator.is_empty() {
+                    dict.set_item("dc_creator", &xmp.dc_creator)?;
+                }
+                if let Some(ref desc) = xmp.dc_description {
+                    dict.set_item("dc_description", desc)?;
+                }
+                if !xmp.dc_subject.is_empty() {
+                    dict.set_item("dc_subject", &xmp.dc_subject)?;
+                }
+                if let Some(ref lang) = xmp.dc_language {
+                    dict.set_item("dc_language", lang)?;
+                }
+                if let Some(ref tool) = xmp.xmp_creator_tool {
+                    dict.set_item("xmp_creator_tool", tool)?;
+                }
+                if let Some(ref date) = xmp.xmp_create_date {
+                    dict.set_item("xmp_create_date", date)?;
+                }
+                if let Some(ref date) = xmp.xmp_modify_date {
+                    dict.set_item("xmp_modify_date", date)?;
+                }
+                if let Some(ref producer) = xmp.pdf_producer {
+                    dict.set_item("pdf_producer", producer)?;
+                }
+                if let Some(ref keywords) = xmp.pdf_keywords {
+                    dict.set_item("pdf_keywords", keywords)?;
+                }
+                Ok(dict.into())
+            }
+        }
+    }
+
     /// String representation of the document.
     ///
     /// Returns:
@@ -2293,6 +2519,68 @@ impl PyPdf {
     ///     True
     fn to_bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    /// Create a PDF from an image file.
+    ///
+    /// Args:
+    ///     path (str): Path to the image file (PNG, JPEG)
+    ///
+    /// Returns:
+    ///     Pdf: Created PDF document with image as a page
+    ///
+    /// Raises:
+    ///     RuntimeError: If image loading or PDF creation fails
+    #[staticmethod]
+    fn from_image(path: &str) -> PyResult<Self> {
+        use crate::api::Pdf;
+        let pdf = Pdf::from_image(path)
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create PDF from image: {}", e)))?;
+        Ok(PyPdf {
+            bytes: pdf.into_bytes(),
+        })
+    }
+
+    /// Create a multi-page PDF from multiple image files.
+    ///
+    /// Each image becomes a separate page.
+    ///
+    /// Args:
+    ///     paths (list[str]): List of paths to image files
+    ///
+    /// Returns:
+    ///     Pdf: Created PDF document
+    ///
+    /// Raises:
+    ///     RuntimeError: If image loading or PDF creation fails
+    #[staticmethod]
+    fn from_images(paths: Vec<String>) -> PyResult<Self> {
+        use crate::api::Pdf;
+        let pdf = Pdf::from_images(&paths)
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create PDF from images: {}", e)))?;
+        Ok(PyPdf {
+            bytes: pdf.into_bytes(),
+        })
+    }
+
+    /// Create a PDF from image bytes.
+    ///
+    /// Args:
+    ///     data (bytes): Raw image data (PNG or JPEG)
+    ///
+    /// Returns:
+    ///     Pdf: Created PDF document
+    ///
+    /// Raises:
+    ///     RuntimeError: If image loading or PDF creation fails
+    #[staticmethod]
+    fn from_image_bytes(data: &[u8]) -> PyResult<Self> {
+        use crate::api::Pdf;
+        let pdf = Pdf::from_image_bytes(data)
+            .map_err(|e| PyRuntimeError::new_err(format!("Failed to create PDF from image bytes: {}", e)))?;
+        Ok(PyPdf {
+            bytes: pdf.into_bytes(),
+        })
     }
 
     /// Get the size of the PDF in bytes.

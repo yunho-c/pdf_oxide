@@ -1371,7 +1371,7 @@ mod tests {
             BorderStyleType::Underline,
         ] {
             let line = LineAnnotation::new((0.0, 0.0), (100.0, 100.0))
-                .with_border_style(style.clone());
+                .with_border_style(*style);
             let dict = line.build(&[]);
             assert!(dict.contains_key("BS"));
             match dict.get("BS") {
@@ -1544,7 +1544,7 @@ mod tests {
             BorderStyleType::Underline,
         ] {
             let shape = ShapeAnnotation::circle(Rect::new(0.0, 0.0, 100.0, 100.0))
-                .with_border_style(style.clone());
+                .with_border_style(*style);
             let dict = shape.build(&[]);
             assert!(dict.contains_key("BS"));
         }
@@ -1723,7 +1723,7 @@ mod tests {
             BorderStyleType::Underline,
         ] {
             let polygon = PolygonAnnotation::polygon(vec![(0.0, 0.0), (100.0, 100.0)])
-                .with_border_style(style.clone());
+                .with_border_style(*style);
             let dict = polygon.build(&[]);
             assert!(dict.contains_key("BS"));
         }

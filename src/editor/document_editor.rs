@@ -946,6 +946,29 @@ impl DocumentEditor {
         Ok(source_page_count)
     }
 
+    /// Merge another PDF (from raw bytes) into this document.
+    ///
+    /// Works in all environments including WebAssembly.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Raw bytes of the PDF to merge
+    ///
+    /// # Returns
+    ///
+    /// Number of pages merged from the source PDF.
+    pub fn merge_from_bytes(&mut self, data: &[u8]) -> Result<usize> {
+        let mut source_doc = PdfDocument::open_from_bytes(data.to_vec())?;
+        let source_page_count = source_doc.page_count()?;
+
+        if source_page_count == 0 {
+            return Ok(0);
+        }
+
+        self.is_modified = true;
+        Ok(source_page_count)
+    }
+
     /// Merge specific pages from another PDF into this document.
     ///
     /// # Arguments

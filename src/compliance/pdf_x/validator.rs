@@ -1708,17 +1708,14 @@ mod tests {
         // Test via finalize approach: manually simulate what check_action does
         if let Object::Dictionary(d) = &action {
             if let Some(Object::Name(action_type)) = d.get("S") {
-                match action_type.as_str() {
-                    "JavaScript" => {
-                        result.add_error(
-                            XComplianceError::new(
-                                XErrorCode::JavaScriptNotAllowed,
-                                "JavaScript actions not allowed",
-                            )
-                            .with_clause("6.6.1"),
-                        );
-                    }
-                    _ => {}
+                if action_type.as_str() == "JavaScript" {
+                    result.add_error(
+                        XComplianceError::new(
+                            XErrorCode::JavaScriptNotAllowed,
+                            "JavaScript actions not allowed",
+                        )
+                        .with_clause("6.6.1"),
+                    );
                 }
             }
         }
@@ -2354,11 +2351,13 @@ mod tests {
 
     #[test]
     fn test_validation_stats_mutation() {
-        let mut stats = XValidationStats::default();
-        stats.pages_checked = 5;
-        stats.fonts_checked = 10;
-        stats.fonts_embedded = 8;
-        stats.has_transparency = true;
+        let mut stats = XValidationStats {
+            pages_checked: 5,
+            fonts_checked: 10,
+            fonts_embedded: 8,
+            has_transparency: true,
+            ..Default::default()
+        };
         stats.color_spaces_found.push("DeviceCMYK".to_string());
         stats.output_intent = Some("Fogra39".to_string());
 
