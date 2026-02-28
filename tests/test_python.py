@@ -848,13 +848,15 @@ def test_merge_from_bytes():
     import os
 
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
-        pdf1.save(f.name)
-        try:
-            doc = PdfDocument(f.name)
-            count = doc.merge_from(pdf2.to_bytes())
-            assert count == 1, "Should merge 1 page"
-        finally:
-            os.unlink(f.name)
+        tmp_path = f.name
+    # File handle closed before use — required on Windows (file locking)
+    try:
+        pdf1.save(tmp_path)
+        doc = PdfDocument(tmp_path)
+        count = doc.merge_from(pdf2.to_bytes())
+        assert count == 1, "Should merge 1 page"
+    finally:
+        os.unlink(tmp_path)
 
 
 # === File Embedding Tests ===

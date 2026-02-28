@@ -784,11 +784,7 @@ mod tests {
 
         let stem_regular = font_regular.stem_v();
         let stem_bold = font_bold.stem_v();
-        assert!(
-            stem_regular > 0,
-            "Regular stem_v should be positive, got {}",
-            stem_regular
-        );
+        assert!(stem_regular > 0, "Regular stem_v should be positive, got {}", stem_regular);
         assert!(
             stem_bold > stem_regular,
             "Bold stem_v ({}) should be greater than regular stem_v ({})",
