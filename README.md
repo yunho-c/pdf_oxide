@@ -1,6 +1,6 @@
-# PDF Oxide - The Fastest PDF Library for Python and Rust
+# PDF Oxide - The Fastest PDF Toolkit for Python, Rust, CLI & AI
 
-The fastest Python PDF library for text extraction, image extraction, and markdown conversion. Built on a Rust core — 0.8ms mean per document, 5× faster than PyMuPDF, 15× faster than pypdf. 100% pass rate on 3,830 real-world PDFs. MIT licensed.
+The fastest PDF library for text extraction, image extraction, and markdown conversion. Rust core with Python bindings, WASM support, CLI tool, and MCP server for AI assistants. 0.8ms mean per document, 5× faster than PyMuPDF, 15× faster than pypdf. 100% pass rate on 3,830 real-world PDFs. MIT licensed.
 
 [![Crates.io](https://img.shields.io/crates/v/pdf_oxide.svg)](https://crates.io/crates/pdf_oxide)
 [![PyPI](https://img.shields.io/pypi/v/pdf_oxide.svg)](https://pypi.org/project/pdf_oxide/)
@@ -41,12 +41,37 @@ let markdown = doc.to_markdown(0, Default::default())?;
 pdf_oxide = "0.3"
 ```
 
+### CLI
+```bash
+pdf-oxide text document.pdf
+pdf-oxide markdown document.pdf -o output.md
+pdf-oxide search document.pdf "pattern"
+pdf-oxide merge a.pdf b.pdf -o combined.pdf
+```
+
+```bash
+brew install yfedoseev/tap/pdf-oxide
+```
+
+### MCP Server (for AI assistants)
+```bash
+# Install
+brew install yfedoseev/tap/pdf-oxide   # includes pdf-oxide-mcp
+
+# Configure in Claude Desktop / Claude Code / Cursor
+{
+  "mcpServers": {
+    "pdf-oxide": { "command": "crgx", "args": ["pdf_oxide_mcp@latest"] }
+  }
+}
+```
+
 ## Why pdf_oxide?
 
 - **Fast** — 0.8ms mean per document, 5× faster than PyMuPDF, 15× faster than pypdf, 29× faster than pdfplumber
 - **Reliable** — 100% pass rate on 3,830 test PDFs, zero panics, zero timeouts
 - **Complete** — Text extraction, image extraction, PDF creation, and editing in one library
-- **Dual-language** — First-class Rust API and Python bindings via PyO3
+- **Multi-platform** — Rust, Python, JavaScript/WASM, CLI, and MCP server for AI assistants
 - **Permissive license** — MIT / Apache-2.0 — use freely in commercial and open-source projects
 
 ## Performance
@@ -203,6 +228,56 @@ npm install pdf-oxide-wasm
 const { WasmPdfDocument } = require("pdf-oxide-wasm");
 ```
 
+### CLI
+
+```bash
+brew install yfedoseev/tap/pdf-oxide    # Homebrew (macOS/Linux)
+cargo install pdf_oxide_cli             # Cargo
+cargo binstall pdf_oxide_cli            # Pre-built binary via cargo-binstall
+```
+
+### MCP Server
+
+```bash
+brew install yfedoseev/tap/pdf-oxide    # Included with CLI in Homebrew
+cargo install pdf_oxide_mcp             # Cargo
+```
+
+## CLI
+
+22 commands for PDF processing directly from your terminal:
+
+```bash
+pdf-oxide text report.pdf                      # Extract text
+pdf-oxide markdown report.pdf -o report.md     # Convert to Markdown
+pdf-oxide html report.pdf -o report.html       # Convert to HTML
+pdf-oxide info report.pdf                      # Show metadata
+pdf-oxide search report.pdf "neural.?network"  # Search (regex)
+pdf-oxide images report.pdf -o ./images/       # Extract images
+pdf-oxide merge a.pdf b.pdf -o combined.pdf    # Merge PDFs
+pdf-oxide split report.pdf -o ./pages/         # Split into pages
+pdf-oxide watermark doc.pdf "DRAFT"            # Add watermark
+pdf-oxide forms w2.pdf --fill "name=Jane"      # Fill form fields
+```
+
+Run `pdf-oxide` with no arguments for interactive REPL mode. Use `--pages 1-5` to process specific pages, `--json` for machine-readable output.
+
+## MCP Server
+
+`pdf-oxide-mcp` lets AI assistants (Claude, Cursor, etc.) extract content from PDFs locally via the [Model Context Protocol](https://modelcontextprotocol.io/).
+
+Add to your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "pdf-oxide": { "command": "crgx", "args": ["pdf_oxide_mcp@latest"] }
+  }
+}
+```
+
+The server exposes an `extract` tool that supports text, markdown, and HTML output formats with optional page ranges and image extraction. All processing runs locally — no files leave your machine.
+
 ## Building from Source
 
 ```bash
@@ -220,16 +295,19 @@ maturin develop
 
 ## Documentation
 
-- **[Getting Started (Rust)](docs/getting-started-rust.md)** - Complete Rust guide
-- **[Getting Started (Python)](docs/getting-started-python.md)** - Complete Python guide
-- **[Getting Started (WASM)](docs/getting-started-wasm.md)** - Browser and Node.js guide
-- **[API Docs](https://docs.rs/pdf_oxide)** - Full Rust API reference
 - **[Full Documentation](https://pdf.oxide.fyi)** - Complete documentation site
+- **[Getting Started (Rust)](https://pdf.oxide.fyi/docs/getting-started/rust)** - Rust guide
+- **[Getting Started (Python)](https://pdf.oxide.fyi/docs/getting-started/python)** - Python guide
+- **[Getting Started (WASM)](https://pdf.oxide.fyi/docs/getting-started/javascript)** - Browser and Node.js guide
+- **[Getting Started (CLI)](https://pdf.oxide.fyi/docs/getting-started/cli)** - CLI guide
+- **[Getting Started (MCP)](https://pdf.oxide.fyi/docs/getting-started/mcp)** - MCP server for AI assistants
+- **[API Docs](https://docs.rs/pdf_oxide)** - Full Rust API reference
 - **[Performance Benchmarks](https://pdf.oxide.fyi/docs/performance)** - Full benchmark methodology and results
 
 ## Use Cases
 
 - **RAG / LLM pipelines** — Convert PDFs to clean Markdown for retrieval-augmented generation with LangChain, LlamaIndex, or any framework
+- **AI assistants** — Give Claude, Cursor, or any MCP-compatible tool direct PDF access via the MCP server
 - **Document processing at scale** — Extract text, images, and metadata from thousands of PDFs in seconds
 - **Data extraction** — Pull structured data from forms, tables, and layouts
 - **Academic research** — Parse papers, extract citations, and process large corpora
@@ -261,4 +339,4 @@ cargo build && cargo test && cargo fmt && cargo clippy -- -D warnings
 
 ---
 
-**Rust** + **Python** + **WASM** | MIT/Apache-2.0 | 100% pass rate on 3,830 PDFs | 0.8ms mean | 5× faster than PyMuPDF | v0.3.10
+**Rust** + **Python** + **WASM** + **CLI** + **MCP** | MIT/Apache-2.0 | 100% pass rate on 3,830 PDFs | 0.8ms mean | 5× faster than PyMuPDF | v0.3.11

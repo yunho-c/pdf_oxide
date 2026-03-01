@@ -150,8 +150,8 @@ jobs:
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.target == 'aarch64-unknown-linux-gnu' && 'aarch64-linux-gnu-gcc' || '' }}
         run: |
-          cargo build --release --target ${{ matrix.target }}
           cargo build --release -p pdf_oxide_cli --target ${{ matrix.target }}
+          cargo build --release -p pdf_oxide_mcp --target ${{ matrix.target }}
 
       - name: Build .deb package (Linux x86_64 glibc)
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -174,22 +174,7 @@ jobs:
           VERSION="${{ needs.validate.outputs.version }}"
           mkdir -p dist
           cd target/${{ matrix.target }}/release
-
-          # List all binaries
-          BINARIES=(
-            "pdf-oxide"
-            "analyze_pdf_features"
-            "benchmark_all_pdfs"
-            "export_to_html"
-            "export_to_markdown"
-            "export_to_text"
-            "validate_content"
-            "validate_dataset"
-            "validate_structured"
-          )
-
-          # Create archive with all binaries
-          tar czf ../../../dist/${{ matrix.artifact_name }}-${VERSION}.tar.gz "${BINARIES[@]}"
+          tar czf ../../../dist/${{ matrix.artifact_name }}-${VERSION}.tar.gz pdf-oxide pdf-oxide-mcp
 
       - name: Create archive (Windows)
         if: runner.os == 'Windows'
@@ -198,20 +183,7 @@ jobs:
           $VERSION = "${{ needs.validate.outputs.version }}"
           New-Item -ItemType Directory -Force -Path dist
           Set-Location target/${{ matrix.target }}/release
-
-          $BINARIES = @(
-            "pdf-oxide.exe",
-            "analyze_pdf_features.exe",
-            "benchmark_all_pdfs.exe",
-            "export_to_html.exe",
-            "export_to_markdown.exe",
-            "export_to_text.exe",
-            "validate_content.exe",
-            "validate_dataset.exe",
-            "validate_structured.exe"
-          )
-
-          Compress-Archive -Path $BINARIES -DestinationPath ../../../dist/${{ matrix.artifact_name }}-${VERSION}.zip
+          Compress-Archive -Path @("pdf-oxide.exe", "pdf-oxide-mcp.exe") -DestinationPath ../../../dist/${{ matrix.artifact_name }}-${VERSION}.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
@@ -383,6 +355,11 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
 
+      - name: Publish MCP server to crates.io
+        run: cargo publish -p pdf_oxide_mcp
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
+
   # Publish to PyPI (optional)
   publish-pypi:
     name: Publish to PyPI
@@ -501,6 +478,19 @@ jobs:
             pdf-oxide.rb
             pdf-oxide.json
           retention-days: 90
+
+      - name: Push to Homebrew tap
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/yfedoseev/homebrew-tap.git" tap-repo
+          cp pdf-oxide.rb tap-repo/Formula/pdf-oxide.rb
+          cd tap-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/pdf-oxide.rb
+          git commit -m "Update pdf-oxide to ${{ needs.validate.outputs.version }}"
+          git push
 
       - name: Push Scoop manifest
         env:

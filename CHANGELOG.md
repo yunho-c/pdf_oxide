@@ -3,17 +3,27 @@
 All notable changes to PDFOxide are documented here.
 
 ## [0.3.11] - 2026-02-28
-> CLI, MCP Server, Multi-Platform Distribution, Table Detection Pipeline
+> CLI, MCP Server, Multi-Platform Distribution, Performance
 
 ### New Features
 
-- **CLI with 18 subcommands and interactive REPL** (#176) — standalone `pdf-oxide` binary with text/markdown/html extraction, merge, split, compress, encrypt/decrypt, search, images, rotate, crop, watermark, bookmarks. Interactive REPL with session persistence and autocomplete.
+- **CLI with 22 subcommands and interactive REPL** (#176) — standalone `pdf-oxide` binary with text/markdown/html extraction, merge, split, compress, encrypt/decrypt, search, images, rotate, crop, watermark, forms, bookmarks, and more. Interactive REPL with session persistence and autocomplete. OS-specific install scripts: `curl -fsSL oxide.fyi/install.sh | sh` (Linux/macOS) and `irm oxide.fyi/install.ps1 | iex` (Windows).
 
-- **MCP server for AI agent PDF extraction** (#177) — `pdf-oxide-mcp` binary implementing Model Context Protocol (JSON-RPC 2.0) with `extract` tool for text/markdown/HTML output, page selection, image extraction.
+- **MCP server for AI assistants** (#177) — `pdf-oxide-mcp` binary implementing Model Context Protocol (JSON-RPC 2.0 over stdio) with `extract` tool for text/markdown/HTML output, page selection, and image extraction. Zero-install via [crgx](https://crgx.dev): just add `{"command": "crgx", "args": ["pdf_oxide_mcp@latest"]}` to Claude Desktop, Claude Code, or Cursor config.
 
-- **Multi-platform distribution** — pre-built binaries for 6 targets (Linux x86_64 glibc/musl, Linux ARM64, macOS Intel/Apple Silicon, Windows). Homebrew, Scoop, .deb, cargo-binstall, and shell installer support.
+- **Multi-platform distribution** — pre-built binaries for 6 targets (Linux x86_64 glibc/musl, Linux ARM64, macOS Intel/Apple Silicon, Windows). Homebrew tap, Scoop bucket, .deb packages, cargo-binstall, and shell installers. Release archives now include both `pdf-oxide` (CLI) and `pdf-oxide-mcp` (MCP server).
 
 - **Table detection pipeline** (#178) — wired structure-tree and spatial table detectors into `to_markdown()`, `to_html()`, and converters via new `extract_page_tables()` method. Markdown renders `| col |` tables, HTML renders `<table>` elements, plain text uses tab-delimited format.
+
+### Performance
+
+- **Image extraction 270x speedup on pathological pages** — pre-resolve XObject dictionary once per page (was per-Do operator), reuse `xobject_stream_cache` for Form XObject decompression, use fast image-only content stream parser for Form XObjects, cache Form XObject image results, avoid redundant stream cloning for ColorSpace resolution. Page 423 of "Understanding Deep Learning" (194 Do operators): 57s → 0.2s.
+
+- **Markdown conversion 6x speedup** — replaced O(n²) DBSCAN line clustering with O(n log n) sort-based approach, eliminated redundant `extract_spans()` call in markdown pipeline (was extracting text twice per page), removed per-heading full-page font scan.
+
+- **Pre-decompression image filtering** — skip decompressing image streams when dimensions exceed `max_image_pixels` (default 25MP). Avoids allocating and decompressing multi-gigabyte streams for oversized images.
+
+- **Faster PNG encoding** — skip tiny glyph-fragment images (<8x8 pixels) that are font rendering artifacts, not real images. Skip base64 embedding for oversized images (>4MP) in markdown output.
 
 ### Bug Fixes
 
@@ -22,6 +32,13 @@ All notable changes to PDFOxide are documented here.
 - **Compressed xref validation** — `validate_object_at_offset()` incorrectly treated compressed (type 2) xref entries' object stream numbers as byte offsets, triggering unnecessary full-file xref reconstruction (35+ seconds on large PDFs). Compressed entries are now recognized as valid without byte-level seeking.
 
 - Replaced broken inline table heuristic (required all rows to have same column count) with proper two-strategy detection: structure tree first, spatial fallback.
+
+### Release Pipeline
+
+- MCP server added to CI (build on Linux, macOS, Windows) and release workflow (build, archive, publish to crates.io).
+- Homebrew tap push automated in release workflow (was missing — only Scoop was being pushed).
+- Release archives cleaned up: only `pdf-oxide` + `pdf-oxide-mcp` (removed 8 legacy dev binaries).
+- Homebrew formula installs both `pdf-oxide` and `pdf-oxide-mcp`.
 
 ## [0.3.10] - 2026-02-26
 > 21 Issues Resolved — Parallel Extraction, WASM, Batch API, Text Quality, Table Improvements

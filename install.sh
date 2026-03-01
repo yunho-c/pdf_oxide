@@ -1,6 +1,6 @@
 #!/bin/sh
 # Universal installer for pdf-oxide CLI
-# Usage: curl -fsSL https://raw.githubusercontent.com/yfedoseev/pdf_oxide/main/install.sh | sh
+# Usage: curl -fsSL oxide.fyi/install.sh | sh
 set -eu
 
 REPO="yfedoseev/pdf_oxide"
@@ -58,7 +58,7 @@ download_and_install() {
     TMPDIR=$(mktemp -d)
     trap 'rm -rf "$TMPDIR"' EXIT
 
-    info "Downloading ${BINARY_NAME} v${VERSION} for ${PLATFORM} ${ARCH_NAME}${MUSL_SUFFIX}..."
+    info "Downloading pdf-oxide v${VERSION} for ${PLATFORM} ${ARCH_NAME}${MUSL_SUFFIX}..."
 
     if command -v curl >/dev/null 2>&1; then
         curl -fsSL "$URL" -o "$TMPDIR/archive.tar.gz"
@@ -77,6 +77,7 @@ download_and_install() {
     mkdir -p "$INSTALL_DIR"
     mv "$TMPDIR/${BINARY_NAME}" "$INSTALL_DIR/${BINARY_NAME}"
     chmod +x "$INSTALL_DIR/${BINARY_NAME}"
+
 }
 
 check_path() {

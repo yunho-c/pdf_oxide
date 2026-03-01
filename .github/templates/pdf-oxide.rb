@@ -21,6 +21,7 @@ class PdfOxide < Formula
 
   def install
     bin.install "pdf-oxide"
+    bin.install "pdf-oxide-mcp"
   end
 
   test do

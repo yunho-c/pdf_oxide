@@ -1,5 +1,5 @@
 # Universal installer for pdf-oxide CLI (Windows)
-# Usage: irm https://raw.githubusercontent.com/yfedoseev/pdf_oxide/main/install.ps1 | iex
+# Usage: irm oxide.fyi/install.ps1 | iex
 $ErrorActionPreference = "Stop"
 
 $Repo = "yfedoseev/pdf_oxide"
@@ -49,6 +49,7 @@ if (-not (Test-Path $BinaryPath)) {
 Write-Info "Installing to $InstallDir..."
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Move-Item -Force -Path $BinaryPath -Destination (Join-Path $InstallDir "$BinaryName.exe")
+
 
 # Add to PATH if not already present
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
