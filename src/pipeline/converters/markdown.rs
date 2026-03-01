@@ -914,4 +914,176 @@ mod tests {
         assert!(result.contains("| T1 |"), "Should contain first table");
         assert!(result.contains("| T2 |"), "Should contain second table");
     }
+
+    // ============================================================================
+    // Issue #182: Bullet detection tests
+    // ============================================================================
+
+    #[test]
+    fn test_is_bullet_span() {
+        assert!(MarkdownOutputConverter::is_bullet_span("►"));
+        assert!(MarkdownOutputConverter::is_bullet_span("•"));
+        assert!(MarkdownOutputConverter::is_bullet_span("▪"));
+        assert!(MarkdownOutputConverter::is_bullet_span(" ► "));
+        assert!(!MarkdownOutputConverter::is_bullet_span("text"));
+        assert!(!MarkdownOutputConverter::is_bullet_span("►text"));
+        assert!(!MarkdownOutputConverter::is_bullet_span(""));
+    }
+
+    #[test]
+    fn test_starts_with_bullet() {
+        assert!(MarkdownOutputConverter::starts_with_bullet("►text"));
+        assert!(MarkdownOutputConverter::starts_with_bullet("• item"));
+        assert!(MarkdownOutputConverter::starts_with_bullet("  ► indented"));
+        assert!(!MarkdownOutputConverter::starts_with_bullet("text"));
+        assert!(!MarkdownOutputConverter::starts_with_bullet(""));
+    }
+
+    #[test]
+    fn test_strip_bullet() {
+        assert_eq!(MarkdownOutputConverter::strip_bullet("► text"), "text");
+        assert_eq!(MarkdownOutputConverter::strip_bullet("•item"), "item");
+        assert_eq!(
+            MarkdownOutputConverter::strip_bullet("no bullet"),
+            "no bullet"
+        );
+    }
+
+    #[test]
+    fn test_bullet_spans_become_list_items() {
+        // Simulates: ► (separate span) + "Analog input" (next span, same Y)
+        // on a new line from previous content
+        let converter = MarkdownOutputConverter::new();
+        let config = TextPipelineConfig::default();
+
+        let mut title = make_span("FEATURES", 50.0, 660.0, 11.0, FontWeight::Bold);
+        title.reading_order = 0;
+
+        let mut bullet = make_span("►", 50.0, 640.0, 8.8, FontWeight::Normal);
+        bullet.reading_order = 1;
+
+        let mut text = make_span("Analog input", 60.0, 640.0, 11.0, FontWeight::Normal);
+        text.reading_order = 2;
+
+        let mut bullet2 = make_span("►", 50.0, 626.0, 8.8, FontWeight::Normal);
+        bullet2.reading_order = 3;
+
+        let mut text2 = make_span("16-bit ADC", 60.0, 626.0, 11.0, FontWeight::Normal);
+        text2.reading_order = 4;
+
+        let spans = vec![title, bullet, text, bullet2, text2];
+        let result = converter.convert(&spans, &config).unwrap();
+
+        assert!(
+            result.contains("- Analog input"),
+            "Should convert bullet to list item: {}",
+            result
+        );
+        assert!(
+            result.contains("- 16-bit ADC"),
+            "Should convert second bullet: {}",
+            result
+        );
+        assert!(
+            !result.contains("►"),
+            "Should not contain raw bullet character: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_inline_bullet_becomes_list_item() {
+        // Simulates: "► Analog input" as a single span (inline bullet)
+        let converter = MarkdownOutputConverter::new();
+        let config = TextPipelineConfig::default();
+
+        let mut title = make_span("TITLE", 50.0, 660.0, 11.0, FontWeight::Bold);
+        title.reading_order = 0;
+
+        let mut bullet_text = make_span("► Analog input", 50.0, 640.0, 11.0, FontWeight::Normal);
+        bullet_text.reading_order = 1;
+
+        let spans = vec![title, bullet_text];
+        let result = converter.convert(&spans, &config).unwrap();
+
+        assert!(
+            result.contains("- Analog input"),
+            "Should convert inline bullet to list item: {}",
+            result
+        );
+    }
+
+    // ============================================================================
+    // Issue #182: Heading over-detection prevention
+    // ============================================================================
+
+    fn config_with_headings() -> TextPipelineConfig {
+        let mut config = TextPipelineConfig::default();
+        config.output.detect_headings = true;
+        config
+    }
+
+    #[test]
+    fn test_heading_base_font_excludes_small_spans() {
+        // When page has many 8.8pt ► spans, the base font size should
+        // still be ~11pt (excluding small spans), not 8.8pt
+        let converter = MarkdownOutputConverter::new();
+        let config = config_with_headings();
+
+        let mut spans = Vec::new();
+        let mut order = 0;
+
+        // 10 bullet spans at 8.8pt (should be excluded from median)
+        for i in 0..10 {
+            let mut s = make_span("►", 50.0, 600.0 - (i as f32) * 14.0, 8.8, FontWeight::Normal);
+            s.reading_order = order;
+            order += 1;
+            spans.push(s);
+        }
+
+        // 10 text spans at 11pt (should be the median)
+        for i in 0..10 {
+            let mut s = make_span(
+                "body text content",
+                60.0,
+                600.0 - (i as f32) * 14.0,
+                11.0,
+                FontWeight::Bold,
+            );
+            s.reading_order = order;
+            order += 1;
+            spans.push(s);
+        }
+
+        let result = converter.convert(&spans, &config).unwrap();
+
+        // "body text content" at 11pt should NOT be detected as heading
+        // because base_font_size should be ~11pt (ratio 1.0)
+        assert!(
+            !result.contains("### body text content"),
+            "11pt bold text should not be heading when base is 11pt: {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_heading_detection_still_works_for_large_fonts() {
+        let converter = MarkdownOutputConverter::new();
+        let config = config_with_headings();
+
+        let mut heading = make_span("BIG HEADING", 50.0, 100.0, 24.0, FontWeight::Bold);
+        heading.reading_order = 0;
+
+        let mut body = make_span("Body text", 50.0, 70.0, 11.0, FontWeight::Normal);
+        body.reading_order = 1;
+
+        let spans = vec![heading, body];
+        let result = converter.convert(&spans, &config).unwrap();
+
+        assert!(
+            result.contains("# BIG HEADING"),
+            "24pt text should be H1: {}",
+            result
+        );
+    }
 }
