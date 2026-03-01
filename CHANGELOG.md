@@ -40,6 +40,10 @@ All notable changes to PDFOxide are documented here.
 - Release archives cleaned up: only `pdf-oxide` + `pdf-oxide-mcp` (removed 8 legacy dev binaries).
 - Homebrew formula installs both `pdf-oxide` and `pdf-oxide-mcp`.
 
+### Community Contributors
+
+Special thanks to **@SeanPedersen** for his continued dedication to PDF Oxide. Sean was one of the first to verify v0.3.10 after release and quickly identified critical issues including NaN sort panics on real-world PDFs and performance regressions in image extraction. His thorough testing across diverse PDF corpora has been invaluable — many of the performance fixes and bug fixes in this release trace directly back to issues he surfaced. Huge kudos for making PDF Oxide more robust for everyone.
+
 ## [0.3.10] - 2026-02-26
 > 21 Issues Resolved — Parallel Extraction, WASM, Batch API, Text Quality, Table Improvements
 
