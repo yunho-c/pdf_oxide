@@ -6213,8 +6213,18 @@ impl PdfDocument {
         let mut has_content = false;
 
         for (i, image) in images.iter().enumerate() {
-            // Skip tiny images (glyph fragments, vector artifacts)
-            if image.width() < 8 || image.height() < 8 {
+            // Skip tiny images (glyph fragments, vector artifacts).
+            // Images under 32x32 are almost always Type3 font glyphs stored as
+            // XObject images — not meaningful content for markdown output.
+            if image.width() < 32 || image.height() < 32 {
+                continue;
+            }
+
+            // Skip Indexed colorspace images under 64x64 — these are palette-based
+            // glyph fragments (80%+ of images in some PDFs like Neural Science).
+            if *image.color_space() == crate::extractors::images::ColorSpace::Indexed
+                && (image.width() < 64 || image.height() < 64)
+            {
                 continue;
             }
 

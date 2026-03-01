@@ -245,16 +245,61 @@ impl PdfImage {
     ///
     /// Returns an error if the image cannot be encoded.
     pub fn to_png_bytes(&self) -> Result<Vec<u8>> {
+        use image::codecs::png::{CompressionType, FilterType, PngEncoder};
         use image::ImageEncoder;
         use std::io::Cursor;
 
-        let dynamic_image = self.to_dynamic_image()?;
-        let rgba = dynamic_image.to_rgba8();
-
         let mut buffer = Cursor::new(Vec::new());
-        image::codecs::png::PngEncoder::new(&mut buffer)
-            .write_image(rgba.as_raw(), self.width, self.height, image::ColorType::Rgba8)
-            .map_err(|e| Error::Encode(format!("Failed to encode PNG: {}", e)))?;
+        let encoder =
+            PngEncoder::new_with_quality(&mut buffer, CompressionType::Fast, FilterType::NoFilter);
+
+        // Encode in the native pixel format to avoid unnecessary RGBA conversion.
+        // Only use direct paths when pixel buffer size matches exactly —
+        // Indexed/Separation/etc. colorspaces may have fewer bytes than expected.
+        match &self.data {
+            ImageData::Raw { pixels, format } => {
+                let expected_gray = (self.width * self.height) as usize;
+                let expected_rgb = expected_gray * 3;
+
+                if *format == PixelFormat::Grayscale
+                    && matches!(self.color_space, ColorSpace::DeviceGray | ColorSpace::CalGray)
+                    && pixels.len() == expected_gray
+                {
+                    encoder
+                        .write_image(pixels, self.width, self.height, image::ColorType::L8)
+                        .map_err(|e| Error::Encode(format!("Failed to encode PNG: {}", e)))?;
+                } else if *format == PixelFormat::RGB && pixels.len() == expected_rgb {
+                    encoder
+                        .write_image(pixels, self.width, self.height, image::ColorType::Rgb8)
+                        .map_err(|e| Error::Encode(format!("Failed to encode PNG: {}", e)))?;
+                } else {
+                    // Indexed, CMYK, Separation, or mismatched buffers — convert via DynamicImage
+                    let dynamic_image = self.to_dynamic_image()?;
+                    let rgb = dynamic_image.to_rgb8();
+                    encoder
+                        .write_image(
+                            rgb.as_raw(),
+                            self.width,
+                            self.height,
+                            image::ColorType::Rgb8,
+                        )
+                        .map_err(|e| Error::Encode(format!("Failed to encode PNG: {}", e)))?;
+                }
+            }
+            ImageData::Jpeg(_) => {
+                // JPEG data — decode then re-encode as PNG
+                let dynamic_image = self.to_dynamic_image()?;
+                let rgb = dynamic_image.to_rgb8();
+                encoder
+                    .write_image(
+                        rgb.as_raw(),
+                        self.width,
+                        self.height,
+                        image::ColorType::Rgb8,
+                    )
+                    .map_err(|e| Error::Encode(format!("Failed to encode PNG: {}", e)))?;
+            }
+        }
 
         Ok(buffer.into_inner())
     }
