@@ -2951,7 +2951,8 @@ impl TextExtractor {
                 let starts_with_punct = span.text.starts_with(|c: char| {
                     matches!(c, ',' | '.' | ';' | ':' | '!' | '?' | ')' | ']' | '}' | '\'' | '"')
                 });
-                if !current.text.ends_with(' ') && !span.text.starts_with(' ') && !starts_with_punct {
+                if !current.text.ends_with(' ') && !span.text.starts_with(' ') && !starts_with_punct
+                {
                     current.text.push(' ');
                 }
                 current.text.push_str(&span.text);

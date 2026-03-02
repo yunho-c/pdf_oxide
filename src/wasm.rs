@@ -1128,7 +1128,7 @@ impl WasmPdfDocument {
     /// @param rects - Flat array of coordinates [llx1,lly1,urx1,ury1, llx2,lly2,urx2,ury2, ...]
     #[wasm_bindgen(js_name = "eraseRegions")]
     pub fn erase_regions(&mut self, page_index: usize, rects: &[f32]) -> Result<(), JsValue> {
-        if rects.len() % 4 != 0 {
+        if !rects.len().is_multiple_of(4) {
             return Err(JsValue::from_str("rects must have a length that is a multiple of 4"));
         }
         let rect_arrays: Vec<[f32; 4]> = rects

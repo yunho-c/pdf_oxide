@@ -3174,8 +3174,7 @@ impl PdfDocument {
 
                 // Merge into first span, expand bbox to cover entire run
                 let last_span = &spans[run_end - 1];
-                let new_width =
-                    (last_span.bbox.x + last_span.bbox.width) - spans[run_start].bbox.x;
+                let new_width = (last_span.bbox.x + last_span.bbox.width) - spans[run_start].bbox.x;
                 spans[run_start].text = reversed_text;
                 spans[run_start].bbox.width = new_width;
 

@@ -140,10 +140,7 @@ impl MarkdownOutputConverter {
     /// ► • ▪ ▸ ‣ ◦ ● ■ ◆ ○ □
     fn is_bullet_span(text: &str) -> bool {
         let t = text.trim();
-        matches!(
-            t,
-            "►" | "•" | "▪" | "▸" | "‣" | "◦" | "●" | "■" | "◆" | "○" | "□"
-        )
+        matches!(t, "►" | "•" | "▪" | "▸" | "‣" | "◦" | "●" | "■" | "◆" | "○" | "□")
     }
 
     /// Check if text starts with a bullet character (for inline bullets).
@@ -188,7 +185,7 @@ impl MarkdownOutputConverter {
         let size = span.span.font_size;
         let text_len = span.span.text.trim().len();
         // Headings must be short but non-trivial
-        if text_len < 2 || text_len > 200 {
+        if !(2..=200).contains(&text_len) {
             return None;
         }
         if size >= 24.0 {
@@ -208,7 +205,7 @@ impl MarkdownOutputConverter {
     fn heading_level_ratio(&self, span: &OrderedTextSpan, base_font_size: f32) -> Option<u8> {
         let text_len = span.span.text.trim().len();
         // Headings must be short but non-trivial
-        if text_len < 2 || text_len > 200 {
+        if !(2..=200).contains(&text_len) {
             return None;
         }
         let size_ratio = span.span.font_size / base_font_size;
@@ -370,9 +367,7 @@ impl MarkdownOutputConverter {
 
             // Check for paragraph break or line break
             let same_line = prev_span
-                .map(|prev| {
-                    (span.span.bbox.y - prev.span.bbox.y).abs() < span.span.font_size * 0.5
-                })
+                .map(|prev| (span.span.bbox.y - prev.span.bbox.y).abs() < span.span.font_size * 0.5)
                 .unwrap_or(true);
 
             if let Some(prev) = prev_span {
@@ -943,10 +938,7 @@ mod tests {
     fn test_strip_bullet() {
         assert_eq!(MarkdownOutputConverter::strip_bullet("► text"), "text");
         assert_eq!(MarkdownOutputConverter::strip_bullet("•item"), "item");
-        assert_eq!(
-            MarkdownOutputConverter::strip_bullet("no bullet"),
-            "no bullet"
-        );
+        assert_eq!(MarkdownOutputConverter::strip_bullet("no bullet"), "no bullet");
     }
 
     #[test]
@@ -979,16 +971,8 @@ mod tests {
             "Should convert bullet to list item: {}",
             result
         );
-        assert!(
-            result.contains("- 16-bit ADC"),
-            "Should convert second bullet: {}",
-            result
-        );
-        assert!(
-            !result.contains("►"),
-            "Should not contain raw bullet character: {}",
-            result
-        );
+        assert!(result.contains("- 16-bit ADC"), "Should convert second bullet: {}", result);
+        assert!(!result.contains("►"), "Should not contain raw bullet character: {}", result);
     }
 
     #[test]
@@ -1080,10 +1064,6 @@ mod tests {
         let spans = vec![heading, body];
         let result = converter.convert(&spans, &config).unwrap();
 
-        assert!(
-            result.contains("# BIG HEADING"),
-            "24pt text should be H1: {}",
-            result
-        );
+        assert!(result.contains("# BIG HEADING"), "24pt text should be H1: {}", result);
     }
 }
