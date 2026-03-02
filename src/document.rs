@@ -2719,6 +2719,42 @@ impl PdfDocument {
         // For Tagged PDFs, use structure tree for reading order (spec-compliant)
         // For Untagged PDFs, use page content order (spec-compliant)
 
+        // Fast pre-check: skip pages that cannot produce text BEFORE the expensive
+        // structure tree parse. This avoids paying 200ms+ structure tree cost for
+        // cover pages and image-only pages that produce zero text.
+        {
+            let page = self.get_page(page_index)?;
+            let page_dict = page.as_dict().ok_or_else(|| Error::ParseError {
+                offset: 0,
+                reason: "Page is not a dictionary".to_string(),
+            })?;
+            let no_content_text = if self.page_cannot_have_text(page_dict) {
+                true
+            } else {
+                // Also check content stream for BT/Do operators (SIMD-fast scan).
+                match self.get_page_content_data(page_index) {
+                    Ok(ref content_data) => !Self::may_contain_text(content_data),
+                    Err(_) => false, // Can't read content stream — be conservative
+                }
+            };
+            if no_content_text {
+                // No text in content stream. Still collect widget annotation text
+                // (form field values) and non-widget annotation text (sticky notes).
+                let widget_spans = self.extract_widget_spans(page_index);
+                let mut text = String::new();
+                for span in &widget_spans {
+                    if !span.text.is_empty() {
+                        if !text.is_empty() {
+                            text.push('\n');
+                        }
+                        text.push_str(&span.text);
+                    }
+                }
+                self.append_non_widget_annotation_text(page_index, &mut text);
+                return Ok(text);
+            }
+        }
+
         // Check if this is a Tagged PDF with structure tree (cached after first check).
         // Uses Arc to avoid expensive deep clones of the tree on every page.
         let cached_tree = match &self.structure_tree_cache {
@@ -4288,10 +4324,11 @@ impl PdfDocument {
         // This happens with Form XObjects that lack /StructParents, where
         // their BDC/MCID markers exist in the content stream but are not
         // registered in the page's ParentTree.
-        let unconsumed: Vec<(&u32, &Vec<TextSpan>)> = mcid_map
+        let mut unconsumed: Vec<(&u32, &Vec<TextSpan>)> = mcid_map
             .iter()
             .filter(|(mcid, _)| !consumed_mcids.contains(mcid))
             .collect();
+        unconsumed.sort_by_key(|(mcid, _)| **mcid);
         if !unconsumed.is_empty() {
             log::debug!(
                 "Appending {} unreferenced MCIDs (e.g., from Form XObjects without StructParents)",
@@ -4464,10 +4501,11 @@ impl PdfDocument {
         }
 
         // Append spans with MCIDs not referenced by the structure tree
-        let unconsumed: Vec<(&u32, &Vec<TextSpan>)> = mcid_map
+        let mut unconsumed: Vec<(&u32, &Vec<TextSpan>)> = mcid_map
             .iter()
             .filter(|(mcid, _)| !consumed_mcids.contains(mcid))
             .collect();
+        unconsumed.sort_by_key(|(mcid, _)| **mcid);
         if !unconsumed.is_empty() {
             log::debug!(
                 "Appending {} unreferenced MCIDs (e.g., from Form XObjects without StructParents)",
@@ -5857,8 +5895,10 @@ impl PdfDocument {
                     use std::hash::{Hash, Hasher};
                     let mut hasher = std::collections::hash_map::DefaultHasher::new();
                     font_refs_for_fingerprint.hash(&mut hasher);
-                    // Include font dict keys for uniqueness
-                    for (name, _) in font_dict.iter() {
+                    // Include font dict keys for uniqueness (sorted for determinism)
+                    let mut sorted_font_names: Vec<&String> = font_dict.keys().collect();
+                    sorted_font_names.sort();
+                    for name in &sorted_font_names {
                         name.hash(&mut hasher);
                     }
                     hasher.finish()
@@ -5902,7 +5942,14 @@ impl PdfDocument {
                 // Track spot-check data: first font name and its content hash
                 let mut spot_check: Option<(String, u64)> = None;
 
-                for (name, font_obj) in font_dict {
+                // Sort font entries by name for deterministic processing order.
+                // HashMap iteration order is randomized per-process, which causes
+                // non-deterministic text extraction when font CMap sharing depends
+                // on the order fonts are loaded.
+                let mut sorted_font_entries: Vec<(&String, &Object)> = font_dict.iter().collect();
+                sorted_font_entries.sort_by_key(|(name, _)| name.as_str());
+
+                for (name, font_obj) in sorted_font_entries {
                     // If font is a reference, check per-font cache first
                     if let Some(font_ref) = font_obj.as_reference() {
                         if let Some(cached) = self.font_cache.get(&font_ref) {

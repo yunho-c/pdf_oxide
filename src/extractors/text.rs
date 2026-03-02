@@ -2361,9 +2361,13 @@ impl TextExtractor {
             }
         }
 
-        // First pass: collect available TrueType cmaps keyed by stripped base font name
+        // First pass: collect available TrueType cmaps keyed by stripped base font name.
+        // Sort by font name for deterministic donor selection (HashMap iteration is random).
         let mut cmap_donors: Vec<(String, crate::fonts::truetype_cmap::TrueTypeCMap)> = Vec::new();
-        for font in self.fonts.values() {
+        let mut sorted_font_keys: Vec<&String> = self.fonts.keys().collect();
+        sorted_font_keys.sort();
+        for key in &sorted_font_keys {
+            let font = &self.fonts[*key];
             if let Some(cmap) = font.truetype_cmap() {
                 let stripped = strip_subset(&font.base_font).to_string();
                 cmap_donors.push((stripped, cmap.clone()));
