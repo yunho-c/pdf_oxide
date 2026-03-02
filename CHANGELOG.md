@@ -2,6 +2,51 @@
 
 All notable changes to PDFOxide are documented here.
 
+## [0.3.12] - 2026-03-01
+> Text Extraction Quality, Markdown Conversion, Crates.io SEO
+
+### Bug Fixes — Text Extraction (#181)
+
+Reported by **@Goldziher** — systematic evaluation across 10 PDFs covering word merging, encoding failures, and RTL text.
+
+- **CID font width calculation** — fixed text-to-user space conversion for CID fonts. Glyph widths were not correctly scaled, causing word boundary detection to merge adjacent words (`destinationmachine` → `destination machine`, `helporganizeas` → `help organize as`).
+
+- **Font-change word boundary detection** — when PDF font changes mid-line (e.g., regular→italic for product names in LaTeX), we now detect this as a word boundary even without explicit spacing. Fixes `introducesDocling` → `introduces Docling`, `PyTorch[2]` → `PyTorch [2]`.
+
+- **Same-font overlap handling** — when two spans with the same font overlap due to Td operator positioning (PDF splits a word across text operators), we no longer insert a false space. Fixes `th is Section` → `this Section`.
+
+- **ActualText bypass font mapping** — Google Docs exports use BDC marked content with `/ActualText` entries containing pre-decoded UTF-16BE Unicode. Previously these bytes were routed through the font's character mapping, corrupting output. Now ActualText is inserted directly as Unicode. Restores full text extraction on `google_doc_document.pdf` and `tiny.pdf`, including correct flag emoji rendering (🇮🇩 🇩🇪 🇦🇹 🇻🇦).
+
+- **RTL visual-order character reversal** — Arabic/Hebrew PDFs position characters individually left-to-right (visual order) as separate Tj operators. Added `reverse_rtl_visual_order_runs()` that detects runs of short RTL spans on the same line and reverses them into correct logical reading order.
+
+- **NaN span filtering** — spans with invalid CTM-derived coordinates (NaN from malformed matrices) are now filtered before text assembly, preventing unpredictable sort order and `CS@VT` merging with body text.
+
+- **CTM concatenation order** — corrected matrix multiplication order for nested coordinate transforms, fixing glyph positioning on pages with complex transform stacks.
+
+### Bug Fixes — Markdown Conversion (#182)
+
+Reported by **@yunho-c** — broken markdown output on the Analog Devices AD5940/AD5941 datasheet (two-column layout with bullet lists).
+
+- **Bullet character detection and list formatting** — PDF bullet characters (`►`, `•`, `▪`, `▸`, `‣`, `◦`, `●`, `■`, `◆`, `○`, `□`) were rendered as inline text with no line breaks. Now detected and converted to markdown `- ` list items with proper line separation. Page 0 of ad5940-5941.pdf: 0 → 57 properly formatted list items.
+
+- **Heading over-detection** — base font size calculation included small bullet/subscript spans (8.8pt `►` characters), pulling the median down to ~8.8pt. This caused 11pt body text to exceed the 1.15× heading ratio threshold and get promoted to `### H3`. Fixed by excluding spans < 9pt from the median calculation. Page 0: 35 → 0 spurious headings.
+
+### Documentation
+
+- **SEO-optimized README.md for `pdf_oxide_cli`** — full 22-command reference, usage examples, install instructions, performance stats. Added `keywords`, `categories`, and `readme` fields to Cargo.toml for crates.io discoverability.
+
+- **SEO-optimized README.md for `pdf_oxide_mcp`** — MCP configuration examples for Claude Desktop, Claude Code, and Cursor. Tool parameter reference, use cases, protocol details. Keywords: `mcp`, `pdf`, `claude`, `llm`, `ai`.
+
+### Tests
+
+- 8 new unit tests for bullet detection (`is_bullet_span`, `starts_with_bullet`, `strip_bullet`), list item rendering, and heading over-detection prevention.
+- 93.8% line coverage on `markdown.rs`, 96.9% on `geometric.rs`.
+- Benchmarked on 198 PDFs: 0 panics, 0 timeouts, 0 errors on both v0.3.11 and v0.3.12.
+
+### Community Contributors
+
+Thank you to **@Goldziher** (Na'aman Hirschfeld) for the thorough text extraction evaluation across 10 diverse PDFs with detailed before/after comparisons against pdfium (#181), and to **@yunho-c** (Yunho Cho) for reporting the markdown conversion quality issues with an excellent real-world test case (#182). Both reports directly drove the quality improvements in this release.
+
 ## [0.3.11] - 2026-02-28
 > CLI, MCP Server, Multi-Platform Distribution, Performance
 
